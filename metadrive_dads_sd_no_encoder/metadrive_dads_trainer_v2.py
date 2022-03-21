@@ -65,6 +65,7 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, availab
         local_skill_tensor = T.tensor([skills[i]], dtype=T.float, device=skill_dynamics.device)
         # local_delta_state = T.tensor([state_delta[i]], dtype=T.float,device=skill_dynamics.device)
         local_next_state_tensor = T.tensor([next_observations[i]], dtype=T.float, device=skill_dynamics.device)
+        local_env_reward = T.tensor([env_rewards[i]], dtype=T.float, device=skill_dynamics.device)
 
         # numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_delta_state).detach().cpu().numpy()[0][0]
         numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_next_state_tensor, local_env_reward).detach().cpu().numpy()[0][0]
