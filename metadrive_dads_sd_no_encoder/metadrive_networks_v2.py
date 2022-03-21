@@ -264,7 +264,7 @@ class SkillDynamics(nn.Module):
     def get_reconstruction_loss(self, observation, skill, next_observation, env_reward):
         de_mean, de_logsigma, predicted_next_state = self.forward(observation, skill)
         #print("forward called for second time")
-        print("\nnext_observation dim:", next_observation.size())
+        #print("\nnext_observation dim:", next_observation.size())
 
         for p, q in zip(self.en_linear_1.parameters(), self.recons_linear_1.parameters()):
             q.data.copy_(p.data)
