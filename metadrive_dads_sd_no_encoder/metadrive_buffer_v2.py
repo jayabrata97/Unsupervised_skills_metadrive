@@ -74,10 +74,11 @@ class DadsBuffer(Dataset):
         next_observations = np.array(self.next_observation_memory)
         dones = np.array(self.terminal_memory, dtype=np.bool)
         skills = np.array(self.latent_memory)
+        env_rewards = np.array(self.reward_memory)
         #state_delta = np.array(self.state_delta_memory)
 
         #return states, skills, state_delta, actions, next_states, dones
-        return observations, skills, actions, next_observations, dones
+        return observations, skills, actions, next_observations, env_rewards, dones
 
     def clear_buffer(self):
         self.observation_memory = []

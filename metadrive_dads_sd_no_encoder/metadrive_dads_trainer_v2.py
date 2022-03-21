@@ -57,7 +57,7 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, latent_di
 # TODO: optimize this function
 def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills):
     L = 500 #100
-    observations, skills, actions, next_observations, dones = dads_buffer.sample_buffer()
+    observations, skills, actions, next_observations, env_rewards, dones = dads_buffer.sample_buffer()
     denom_skills = available_skills
 
     for i in range(len(observations)):
@@ -156,10 +156,10 @@ if __name__ == '__main__':
                 # writer.add_scalar("Skill Dynamics Loss", loss, step_counter)
                 skill_dynamics_loss, (reconstruction_loss, cost_func_loss) = skill_dynamics.get_loss(observation_batch, skill_batch, next_observation_batch, env_reward_batch)
                 loss = skill_dynamics_loss + reconstruction_loss + cost_func_loss
-                # print(" Skill dynamics loss: ",skill_dynamics_loss.item())
-                # print(" Observation reconstruction loss: ",reconstruction_loss.item())
-                # print(" Cost func loss: ",cost_func_loss.item())
-                # print(" Total loss: ",loss.item())
+                print(" Skill dynamics loss: ",skill_dynamics_loss.item(), end='\r')
+                print(" Observation reconstruction loss: ",reconstruction_loss.item(), end='\r')
+                print(" Cost func loss: ",cost_func_loss.item(), end='\r')
+                print(" Total loss: ",loss.item(), end='\r')
                 writer.add_scalar("Total loss", loss.item(), step_counter)
                 writer.add_scalar("Skill Dynamics Loss", skill_dynamics_loss.item(), step_counter)
                 writer.add_scalar("Observation Reconstruction loss", reconstruction_loss.item(), step_counter)
@@ -180,8 +180,8 @@ if __name__ == '__main__':
         agent.save_models()
         T.save(skill_dynamics, './models/dads_driver_gym/skill_dynamics')
         critic_loss, policy_loss, alpha = agent.get_stats()
-        # print(" Critic loss: ",critic_loss.item())
-        # print(" Policy loss: ",policy_loss.item())
+        print(" Critic loss: ",critic_loss.item())
+        print(" Policy loss: ",policy_loss.item())
         writer.add_scalar("Critic Loss", critic_loss.item(), step_counter)
         writer.add_scalar("Policy Loss", policy_loss.item(), step_counter)
         writer.add_scalar("Alpha", alpha.item(), step_counter)
