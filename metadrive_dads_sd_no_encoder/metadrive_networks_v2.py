@@ -252,7 +252,7 @@ class SkillDynamics(nn.Module):
         return de_mean, de_sigma, predicted_next_state
 
     def get_log_probs(self, observation, skill, next_observation, env_reward):  
-        de_mean, de_logsigma, predicted_next_state = self.forward(observation, skill)
+        de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
         print("forward called for first time")
         next_state = self.fc1(next_observation)
         next_state = self.fc2(next_state)
