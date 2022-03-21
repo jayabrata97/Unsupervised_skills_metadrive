@@ -44,7 +44,7 @@ class SacAgent():
                  max_size=10000, #1000
                  actor_layers= 6,
                  critic_layers= 6,
-                 batch_size=64,  ##128
+                 batch_size=128,  ##64
                  start_after=10000,
                  update_after=1000, 
                  chkpt_dir="models", 

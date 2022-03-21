@@ -146,7 +146,7 @@ if __name__ == '__main__':
                                                     steps_per_episode, latent_dims, step_counter)
             print(" step counter:",agent.step_counter)
 
-        sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=2, shuffle=True) 
+        sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128, shuffle=True) 
         for _ in range(K1):
             for observation_batch, skill_batch, next_observation_batch, env_reward_batch in sd_data_loader:
                 # loss = skill_dynamics.get_loss(state_batch, skill_batch, state_delta_batch)
