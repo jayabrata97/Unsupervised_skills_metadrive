@@ -1,6 +1,6 @@
 # trainig loop for dads
 
-from traceback import print_tb
+#from traceback import print_tb
 #import gym
 import numpy as np
 from scipy import stats
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         for _ in range(M):
             dads_buffer, step_counter = run_episode(env, agent, skill_dynamics, dads_buffer,  ##sim_out is extra
                                                     steps_per_episode, latent_dims, step_counter)
-            print(" step counter:",agent.step_counter)
+            # print(" step counter:",agent.step_counter)
 
         sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128, shuffle=True) 
         for _ in range(K1):
@@ -154,12 +154,12 @@ if __name__ == '__main__':
                 # loss = skill_dynamics.get_loss(state_batch, skill_batch, state_delta_batch)
                 # print("\n Skill dynamics loss: ",loss.item())
                 # writer.add_scalar("Skill Dynamics Loss", loss, step_counter)
-                skill_dynamics_loss, (reconstruction_loss, cost_func_loss) = skill_dynamics.get_loss(observation_batch, skill_batch, next_observation_batch, env_reward_batch)  ##I need next observation directly, not delta
+                skill_dynamics_loss, (reconstruction_loss, cost_func_loss) = skill_dynamics.get_loss(observation_batch, skill_batch, next_observation_batch, env_reward_batch)
                 loss = skill_dynamics_loss + reconstruction_loss + cost_func_loss
-                print(" Skill dynamics loss: ",skill_dynamics_loss.item())
-                print(" Observation reconstruction loss: ",reconstruction_loss.item())
-                print(" Cost func loss: ",cost_func_loss.item())
-                print(" Total loss: ",loss.item())
+                # print(" Skill dynamics loss: ",skill_dynamics_loss.item())
+                # print(" Observation reconstruction loss: ",reconstruction_loss.item())
+                # print(" Cost func loss: ",cost_func_loss.item())
+                # print(" Total loss: ",loss.item())
                 writer.add_scalar("Total loss", loss.item(), step_counter)
                 writer.add_scalar("Skill Dynamics Loss", skill_dynamics_loss.item(), step_counter)
                 writer.add_scalar("Observation Reconstruction loss", reconstruction_loss.item(), step_counter)
@@ -168,10 +168,10 @@ if __name__ == '__main__':
                 loss.backward()
                 #T.cuda.init()
                 #T.cuda.empty_cache()
-                print("memory allocated in GBs: ",T.cuda.memory_allocated(device_1) / ((1024)**3))
-                print("memory managed in GBs:",T.cuda.memory_reserved(device_1) / ((1024)**3))
-                print("memory allocated in GBs: ",T.cuda.memory_allocated(device_2) / ((1024)**3))
-                print("memory managed in GBs:",T.cuda.memory_reserved(device_2) / ((1024)**3))
+                # print("memory allocated in GBs: ",T.cuda.memory_allocated(device_1) / ((1024)**3))
+                # print("memory managed in GBs:",T.cuda.memory_reserved(device_1) / ((1024)**3))
+                # print("memory allocated in GBs: ",T.cuda.memory_allocated(device_2) / ((1024)**3))
+                # print("memory managed in GBs:",T.cuda.memory_reserved(device_2) / ((1024)**3))
                 skill_dynamics.optimizer.step()
 
         compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills)
@@ -180,8 +180,8 @@ if __name__ == '__main__':
         agent.save_models()
         T.save(skill_dynamics, './models/dads_driver_gym/skill_dynamics')
         critic_loss, policy_loss, alpha = agent.get_stats()
-        print(" Critic loss: ",critic_loss.item())
-        print(" Policy loss: ",policy_loss.item())
+        # print(" Critic loss: ",critic_loss.item())
+        # print(" Policy loss: ",policy_loss.item())
         writer.add_scalar("Critic Loss", critic_loss.item(), step_counter)
         writer.add_scalar("Policy Loss", policy_loss.item(), step_counter)
         writer.add_scalar("Alpha", alpha.item(), step_counter)
