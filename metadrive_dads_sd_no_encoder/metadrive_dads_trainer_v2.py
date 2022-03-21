@@ -9,6 +9,7 @@ from metadrive_buffer_v2 import DadsBuffer
 from metadrive_networks_v2 import *
 from metadrive_sac_agent_v2 import SacAgent
 from metadrive import MetaDriveEnv
+#from metadrive import SafeMetaDriveEnv
 import torch as T
 from torch.nn.functional import mse_loss
 from torch.utils.data import TensorDataset, DataLoader
@@ -17,7 +18,6 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
-#from metadrive import SafeMetaDriveEnv
 import argparse
 import random
 
@@ -56,7 +56,7 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, latent_di
 
 # TODO: optimize this function
 def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills):
-    L = 100 #500
+    L = 500 #100
     observations, skills, actions, next_observations, dones = dads_buffer.sample_buffer()
     denom_skills = available_skills
 
@@ -86,11 +86,13 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, availab
 
 if __name__ == '__main__':
     writer = SummaryWriter()
+    traffic_density = np.random.uniform(0.4, 0.6)
+    print("Sampled traffic density is: ", traffic_density)
     env = MetaDriveEnv(dict(
         # controller="joystick",
         # use_render=True,
         # manual_control=True,
-        traffic_density= np.random.uniform(0.4, 0.6), #0.1, currently it is sampling only once, not every 1000 steps
+        traffic_density= traffic_density, #0.1, currently it is sampling only once, not every 1000 steps
         random_traffic = False, 
         environment_num=1000,
         start_seed=1000,
@@ -165,7 +167,7 @@ if __name__ == '__main__':
                 skill_dynamics.optimizer.zero_grad()
                 loss.backward()
                 #T.cuda.init()
-                T.cuda.empty_cache()
+                #T.cuda.empty_cache()
                 print("memory allocated in GBs: ",T.cuda.memory_allocated(device_1) / ((1024)**3))
                 print("memory managed in GBs:",T.cuda.memory_reserved(device_1) / ((1024)**3))
                 print("memory allocated in GBs: ",T.cuda.memory_allocated(device_2) / ((1024)**3))
