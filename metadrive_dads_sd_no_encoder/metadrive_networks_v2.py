@@ -242,6 +242,8 @@ class SkillDynamics(nn.Module):
         state = self.en_linear_1(observation)
         state = F.relu(state)
         encoded_state = self.en_linear_2(state)
+        print(encoded_state.size(), end='\r')
+        print(skill.size(), end='\r')
         x = T.cat((encoded_state, skill), dim=-1)
         de_mean = self.de_mean(x)
         de_logsigma = self.de_logsigma(x)

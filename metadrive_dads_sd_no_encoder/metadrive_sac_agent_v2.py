@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from metadrive_buffer_v2 import RLBuffer
 from metadrive_networks_v2 import ActorNetwork, CriticNetwork, DoubleCriticNetwork
 
-T.cuda.empty_cache()
+#T.cuda.empty_cache()
 
 def sample_action(skills):
     #lateral action

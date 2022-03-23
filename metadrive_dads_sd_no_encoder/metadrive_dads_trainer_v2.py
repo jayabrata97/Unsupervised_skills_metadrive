@@ -55,10 +55,12 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, latent_di
     return buffer, step_counter
 
 # TODO: optimize this function
-def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills):
+# def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills):
+def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims):
     L = 500 #100
     observations, skills, actions, next_observations, env_rewards, dones = dads_buffer.sample_buffer()
-    denom_skills = available_skills
+    # denom_skills = available_skills
+    denom_skills = T.tensor(np.random.randint(-1, 1+1, (L, latent_dims)), dtype=T.float, device=skill_dynamics.device)
 
     for i in range(len(observations)):
         local_state_tensor = T.tensor([observations[i]], dtype=T.float, device=skill_dynamics.device)
@@ -69,10 +71,9 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, availab
 
         # numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_delta_state).detach().cpu().numpy()[0][0]
         numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_next_state_tensor, local_env_reward).detach().cpu().numpy()[0][0]
-        local_state_tensor = local_state_tensor.repeat(L,1,1,1)
+        local_state_tensor = local_state_tensor.repeat(L,1)
         # local_delta_state = local_delta_state.repeat(L,1,1,1)
-        local_next_state_tensor = local_next_state_tensor.repeat(L,1,1,1)
-        
+        local_next_state_tensor = local_next_state_tensor.repeat(L,1)
         # denom = skill_dynamics.get_log_probs(local_state_tensor, denom_skills, local_delta_state).detach().cpu().numpy().sum()
         denom = skill_dynamics.get_log_probs(local_state_tensor, denom_skills, local_next_state_tensor, local_env_reward).detach().cpu().numpy().sum()
         # if numerator == 0.0:
@@ -81,6 +82,7 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, availab
         #     denom = 1e-3
         
         intrinsic_reward = numerator/denom + np.log(L)
+        print("intrinsic reward: ", intrinsic_reward, end='\r')
         agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
     dads_buffer.clear_buffer()
 
@@ -110,15 +112,15 @@ if __name__ == '__main__':
     M = 10
     K1 = 32
 
-    available_skills = T.tensor([[1.0, 1.0],
-                                 [1.0, 0.0],
-                                 [1.0, -1.0],
-                                 [0.0, 1.0],
-                                 [0.0, 0.0],
-                                 [0.0, -1.0],
-                                 [-1.0, 1.0],
-                                 [-1.0, 0.0],
-                                 [-1.0, -1.0]], dtype=T.float, device=device_2)  ## trying with T.device('cuda:0')
+    # available_skills = T.tensor([[1.0, 1.0],
+    #                              [1.0, 0.0],
+    #                              [1.0, -1.0],
+    #                              [0.0, 1.0],
+    #                              [0.0, 0.0],
+    #                              [0.0, -1.0],
+    #                              [-1.0, 1.0],
+    #                              [-1.0, 0.0],
+    #                              [-1.0, -1.0]], dtype=T.float, device=device_2)  ## trying with T.device('cuda:0')
 
     dads_buffer = DadsBuffer()
 
@@ -130,7 +132,7 @@ if __name__ == '__main__':
                      n_actions=n_actions,
                      latent_dims=latent_dims,
                      chkpt_dir="models",
-                     name="dads_driver_gym")
+                     name="dads_metadrive")
 
     skill_dynamics = SkillDynamics(lr=3e-7,
                                    obs_dims = 261,
@@ -147,7 +149,7 @@ if __name__ == '__main__':
         for _ in range(M):
             dads_buffer, step_counter = run_episode(env, agent, skill_dynamics, dads_buffer,  ##sim_out is extra
                                                     steps_per_episode, latent_dims, step_counter)
-            # print(" step counter:",agent.step_counter)
+            print(" step counter:",agent.step_counter, end='\r')
 
         sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128, shuffle=True) 
         for _ in range(K1):
@@ -175,17 +177,18 @@ if __name__ == '__main__':
                 # print("memory managed in GBs:",T.cuda.memory_reserved(device_2) / ((1024)**3))
                 skill_dynamics.optimizer.step()
 
-        compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills)
+        # compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills)
+        compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims)
         for _ in range(128):
             agent.learn()
         agent.save_models()
-        T.save(skill_dynamics, './models/dads_driver_gym/skill_dynamics')
+        T.save(skill_dynamics, './models/dads_metadrive/skill_dynamics')
         critic_loss, policy_loss, alpha = agent.get_stats()
-        print(" Critic loss: ",critic_loss.item())
-        print(" Policy loss: ",policy_loss.item())
-        writer.add_scalar("Critic Loss", critic_loss.item(), step_counter)
-        writer.add_scalar("Policy Loss", policy_loss.item(), step_counter)
-        writer.add_scalar("Alpha", alpha.item(), step_counter)
+        print(" Critic loss: ",critic_loss)
+        print(" Policy loss: ",policy_loss)
+        writer.add_scalar("Critic Loss", critic_loss, step_counter)
+        writer.add_scalar("Policy Loss", policy_loss, step_counter)
+        writer.add_scalar("Alpha", alpha, step_counter)
         pbar.update(step_counter-tqdm_count)
         tqdm_count = step_counter
     pbar.close()
