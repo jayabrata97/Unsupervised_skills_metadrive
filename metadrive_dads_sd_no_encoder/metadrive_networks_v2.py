@@ -248,6 +248,7 @@ class SkillDynamics(nn.Module):
         de_mean = self.de_mean(x)
         de_logsigma = self.de_logsigma(x)
         de_sigma = de_logsigma.exp()
+        de_sigma = T.clamp(de_sigma, 0.3, 10)
         de_probs = Normal(de_mean, de_sigma)
         predicted_next_state = de_probs.rsample()
 
@@ -264,7 +265,7 @@ class SkillDynamics(nn.Module):
         return log_probs
  
     def get_reconstruction_loss(self, observation, skill, next_observation, env_reward):
-        de_mean, de_logsigma, predicted_next_state = self.forward(observation, skill)
+        de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
         #print("forward called for second time")
         #print("\nnext_observation dim:", next_observation.size())
 
