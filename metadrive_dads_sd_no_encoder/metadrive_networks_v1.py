@@ -256,11 +256,13 @@ class SkillDynamics(nn.Module):
 
     def get_log_probs(self, observation, skill, next_observation, env_reward):  
         de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
-        #print("forward called for first time")
+        #print("mean dimension is: ", de_mean.size())
+        #print("sigma dimension is: ", de_sigma.size())
         next_state = self.fc1(next_observation)
         next_state = self.fc2(next_state)
         de_probs = Normal(de_mean, de_sigma)
         log_probs = de_probs.log_prob((next_state)).sum(axis=-1, keepdim=True)
+        #print("log_probs dimension is: ", log_probs.size())
         log_probs.to(self.device)
         return log_probs
  

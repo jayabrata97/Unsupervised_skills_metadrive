@@ -6,8 +6,8 @@ import torch as T
 import copy
 import numpy as np
 import torch.nn.functional as F
-from metadrive_buffer_v2 import RLBuffer
-from metadrive_networks_v2 import ActorNetwork, CriticNetwork, DoubleCriticNetwork
+from metadrive_buffer_v1 import RLBuffer
+from metadrive_networks_v1 import ActorNetwork, CriticNetwork, DoubleCriticNetwork
 
 #T.cuda.empty_cache()
 
