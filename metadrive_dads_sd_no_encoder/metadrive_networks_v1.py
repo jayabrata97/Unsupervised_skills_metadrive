@@ -248,7 +248,7 @@ class SkillDynamics(nn.Module):
         de_mean = self.de_mean(x)
         de_logsigma = self.de_logsigma(x)
         de_sigma = de_logsigma.exp()
-        de_sigma = T.clamp(de_sigma, 0.3, 10)
+        de_sigma = T.clamp(de_sigma, 0.4, 10)
         de_probs = Normal(de_mean, de_sigma)
         predicted_next_state = de_probs.rsample()
 
