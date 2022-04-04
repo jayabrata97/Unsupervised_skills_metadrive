@@ -1,5 +1,6 @@
 # Replay buffers for SAC and dads algorithm
 
+from dataclasses import replace
 import numpy as np
 import torch as T
 from torch.utils.data import Dataset

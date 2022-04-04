@@ -40,19 +40,21 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, latent_di
     step_counter_local = 0
     skill = sample_skills(latent_dims)
     while step_counter_local < steps_per_episode:
+        cumulative_env_reward = 0
         action = agent.choose_action(obs, skill)
         agent.step_counter += 1
         obs_, reward, done, info = env.step(action)
         step_counter_local += 1
         step_counter += 1
+        cumulative_env_reward += reward
 
         # buffer.store_transition(obs, action, obs_, done, skill, obs_-obs)
         buffer.store_transition(obs, action, reward, obs_, done, skill)
         obs = obs_
         if done == True:
             obs = env.reset()
-
-    return buffer, step_counter
+    
+    return buffer, step_counter, cumulative_env_reward
 
 # TODO: optimize this function
 # def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims, available_skills):
@@ -82,7 +84,7 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims):
         #     denom = 1e-3
         
         intrinsic_reward = numerator/denom + np.log(L)
-        print("intrinsic reward: ", intrinsic_reward, end='\r')
+        #print("intrinsic reward: ", intrinsic_reward, end='\r')
         agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
     dads_buffer.clear_buffer()
 
@@ -147,9 +149,10 @@ if __name__ == '__main__':
 
     while step_counter < n_steps:
         for _ in range(M):
-            dads_buffer, step_counter = run_episode(env, agent, skill_dynamics, dads_buffer,  ##sim_out is extra
+            dads_buffer, step_counter, cumulative_env_reward = run_episode(env, agent, skill_dynamics, dads_buffer,  ##sim_out is extra
                                                     steps_per_episode, latent_dims, step_counter)
             print(" step counter:",agent.step_counter, end='\r')
+            writer.add_scalar("Cumulative env reward", cumulative_env_reward, step_counter)
 
         sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128, shuffle=True) 
         for _ in range(K1):
@@ -159,9 +162,9 @@ if __name__ == '__main__':
                 # writer.add_scalar("Skill Dynamics Loss", loss, step_counter)
                 skill_dynamics_loss, (reconstruction_loss, cost_func_loss) = skill_dynamics.get_loss(observation_batch, skill_batch, next_observation_batch, env_reward_batch)
                 loss = skill_dynamics_loss + reconstruction_loss + cost_func_loss
-                print(" Skill dynamics loss: ",skill_dynamics_loss.item(), end='\r')
-                print(" Observation reconstruction loss: ",reconstruction_loss.item(), end='\r')
-                print(" Cost func loss: ",cost_func_loss.item(), end='\r')
+                #print(" Skill dynamics loss: ",skill_dynamics_loss.item(), end='\r')
+                #print(" Observation reconstruction loss: ",reconstruction_loss.item(), end='\r')
+                #print(" Cost func loss: ",cost_func_loss.item(), end='\r')
                 print(" Total loss: ",loss.item(), end='\r')
                 writer.add_scalar("Total loss", loss.item(), step_counter)
                 writer.add_scalar("Skill Dynamics Loss", skill_dynamics_loss.item(), step_counter)

@@ -109,6 +109,7 @@ class ActorNetwork(nn.Module):
         mu, logsigma, encoded_state = self.forward(observation, skill)
         logsigma = T.clamp(logsigma, -20, 2)
         sigma = logsigma.exp()
+        #sigma = T.clamp(sigma, 0.4, 7.3891)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
@@ -242,8 +243,8 @@ class SkillDynamics(nn.Module):
         state = self.en_linear_1(observation)
         state = F.relu(state)
         encoded_state = self.en_linear_2(state)
-        print(encoded_state.size(), end='\r')
-        print(skill.size(), end='\r')
+        #print(encoded_state.size(), end='\r')
+        #print(skill.size(), end='\r')
         x = T.cat((encoded_state, skill), dim=-1)
         de_mean = self.de_mean(x)
         de_logsigma = self.de_logsigma(x)

@@ -124,8 +124,12 @@ class SacAgent():
             critic_target = reward + (1.0 - done) * self.gamma * (q_target - self.alpha * logprobs_next_action)
 
         q_1, q_2 = self.critic.forward(state, action, skills)
+        #print("q_1 dim: ", q_1.size())
+        #print("q_2 dim: ", q_2.size())
+        #print("critic_target dim: ", critic_target.size())
         loss_1 = T.nn.MSELoss()(q_1, critic_target)
         loss_2 = T.nn.MSELoss()(q_2, critic_target)
+        #print("loss_1 dim: ", loss_1.size())
 
         q_loss_step = loss_1 + loss_2
         self.critic.optimizer.zero_grad()
@@ -144,6 +148,9 @@ class SacAgent():
 
         target = T.min(p1, p2)
         policy_loss = (self.alpha * logprobs_policy_action - target).mean()
+        # print("logprobs*alpha: ", self.alpha*logprobs_policy_action)
+        # print("target dimension: ",target.size())
+        # print("target: ", target)
         self.actor.optimizer.zero_grad()
         policy_loss.backward()
         # T.nn.utils.clip_grad_norm_(self.actor.parameters(), 0.25)
