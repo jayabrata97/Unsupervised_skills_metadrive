@@ -91,11 +91,11 @@ class DadsBuffer(Dataset):
         #self.state_delta_memory = []
 
     def __getitem__(self, index):
-        observations = T.tensor(self.observation_memory[index], dtype=T.float, device=device_2) #device=T.device("cuda:0")
-        skills = T.tensor(self.latent_memory[index], dtype=T.float, device=device_2)
-        #state_delta = T.tensor(self.state_delta_memory[index], dtype=T.float, device=device_2)
-        next_observations = T.tensor(self.next_observation_memory[index], dtype=T.float, device=device_2)
-        env_rewards = T.tensor(self.reward_memory[index], dtype=T.float, device = device_2)
+        observations = T.tensor(self.observation_memory[index], dtype=T.float, device=device_1) #device=T.device("cuda:0")
+        skills = T.tensor(self.latent_memory[index], dtype=T.float, device=device_1)
+        #state_delta = T.tensor(self.state_delta_memory[index], dtype=T.float, device=device_1)
+        next_observations = T.tensor(self.next_observation_memory[index], dtype=T.float, device=device_1)
+        env_rewards = T.tensor(self.reward_memory[index], dtype=T.float, device = device_1)
 
         return observations, skills, next_observations, env_rewards
 

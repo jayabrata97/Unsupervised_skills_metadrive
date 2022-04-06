@@ -84,8 +84,14 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, latent_dims):
         #     denom = 1e-3
         
         intrinsic_reward = numerator/denom + np.log(L)
-        #print("intrinsic reward: ", intrinsic_reward, end='\r')
-        agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
+        # print("intrinsic reward: ", intrinsic_reward, end='\r')
+        # print("local_env_reward[i] type: ", type(local_env_reward[i]))
+        # print("local_env_reward[i] value: ", local_env_reward[i].item())
+        # print("env_rewards[i] type: ", type(env_rewards[i]))
+        # print("env_rewards[i] value: ", env_rewards[i])
+        total_reward = intrinsic_reward + env_rewards[i]
+        #agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
+        agent.remember(observations[i], skills[i], actions[i], total_reward, next_observations[i], dones[i])
     dads_buffer.clear_buffer()
 
 
@@ -136,7 +142,7 @@ if __name__ == '__main__':
                      chkpt_dir="models",
                      name="dads_metadrive")
 
-    skill_dynamics = SkillDynamics(lr=3e-7,
+    skill_dynamics = SkillDynamics(lr=3e-4,#3e-7
                                    obs_dims = 261,
                                    latent_dims=latent_dims,
                                    fc1_dims=6,

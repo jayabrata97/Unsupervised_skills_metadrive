@@ -63,7 +63,7 @@ class TanhTransform(Transform):
 
 class ActorNetwork(nn.Module):
     def __init__(self, 
-                 lr=3e-7,
+                 lr=3e-4, #3e-7
                  obs_dims = 261,
                  action_dims = 2, 
                  latent_dims = 2, 
@@ -85,9 +85,11 @@ class ActorNetwork(nn.Module):
         nn.init.xavier_uniform_(self.fc1.weight.data)
 
         self.mu = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
-        self.logsigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
+        # self.logsigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
+        self.sigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
         nn.init.xavier_uniform_(self.mu.weight.data)
-        nn.init.xavier_uniform_(self.logsigma.weight.data)
+        # nn.init.xavier_uniform_(self.logsigma.weight.data)
+        nn.init.xavier_uniform_(self.sigma.weight.data)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
@@ -102,14 +104,16 @@ class ActorNetwork(nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         mu = self.mu(x)
-        logsigma = self.logsigma(x)
-        return mu, logsigma, encoded_state
+        # logsigma = self.logsigma(x)
+        # return mu, logsigma, encoded_state
+        sigma = self.sigma(x)
+        return mu, sigma
 
-    def sample_normal(self, observation, skill, reparameterize=True, get_encoded_state=False):
-        mu, logsigma, encoded_state = self.forward(observation, skill)
-        #logsigma = T.clamp(logsigma, -20, 2)
-        sigma = logsigma.exp()
-        sigma = T.clamp(sigma, 0.4, 7.3891)
+    def sample_normal(self, observation, skill, reparameterize=True):
+        mu, sigma = self.forward(observation, skill)
+        # logsigma = T.clamp(logsigma, -20, 2)
+        # sigma = logsigma.exp()
+        sigma = T.clamp(sigma, min=1e-6, max=1)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
@@ -120,16 +124,53 @@ class ActorNetwork(nn.Module):
 
         log_probs = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
         log_probs.to(self.device)
-
-        if get_encoded_state:
-            return action, log_probs, encoded_state
-
+        
         return action, log_probs
+
+class ValueNetwork(nn.Module):
+    def __init__(self,
+                 lr=3e-4,
+                 obs_dims=261,
+                 action_dims=2,
+                 latent_dims=2,
+                 fc1_dims=6,
+                 features_dim=18):
+        super(ValueNetwork, self).__init__()
+        self.lr = lr
+        self.obs_dims = obs_dims
+        self.action_dims = action_dims
+        self.latent_dims = latent_dims
+        self.features_dim = features_dim
+        self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features = 100)
+        nn.init.xavier_uiform_(self.en_linear_1.weight.data)
+        self.en_linear_2 = nn.Linear(in_features = self.obs_dims, out_features = 100)
+        nn.init.xavier_uiform_(self.en_linear_2.weight.data)
+
+        self.fc1 = nn.Linear(in_features = self.features_dim + self.latent_dims, out_features=fc1_dims)
+        nn.init.xavier_uniform_(self.fc1.weight.data)
+        self.v = nn.Linear(in_features=fc1_dims, out_features=1)
+        nn.init.xavier_uniform_(self.v.weight.data)
+
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
+    def forward(self, observation, skill):
+        state = self.en_linear_1(observation)
+        state = F.relu(state)
+        encoded_state = self.en_linear_2(state)
+        x = T.cat((encoded_state, skill), dim=-1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        v = self.v(x)
+
+        return v
 
 # TODO: Does the critic evaluate the skill? Yes
 class CriticNetwork(nn.Module):
     def __init__(self, 
-                 lr=3e-7,
+                 lr=3e-4,#3e-7
                  obs_dims = 261,
                  action_dims=2, 
                  latent_dims=2, 
@@ -170,7 +211,7 @@ class CriticNetwork(nn.Module):
 
 class DoubleCriticNetwork(nn.Module):
     def __init__(self, 
-                 lr=3e-7,
+                 lr=3e-4,#3e-7
                  obs_dims = 261,
                  action_dims=2, 
                  latent_dims=2, 
@@ -203,7 +244,7 @@ class DoubleCriticNetwork(nn.Module):
 # TODO: Should we implement normalization of the input observation
 class SkillDynamics(nn.Module):
     def __init__(self,
-                 lr=3e-7,
+                 lr=3e-4,#3e-7
                  obs_dims = 261,
                  latent_dims=2,
                  fc1_dims=6,
@@ -236,7 +277,7 @@ class SkillDynamics(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
-        self.device = T.device(device_2 if T.cuda.is_available() else 'cpu')
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
     def forward(self, observation, skill):
