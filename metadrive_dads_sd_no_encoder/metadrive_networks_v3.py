@@ -66,14 +66,14 @@ class ActorNetwork(nn.Module):
                  lr=3e-4, #3e-7
                  obs_dims = 261,
                  action_dims = 2, 
-                 latent_dims = 2, 
+                 skill_dims = 2, 
                  fc1_dims = 6, 
                  features_dim = 18):
         super(ActorNetwork, self).__init__()
         self.lr = lr
         self.obs_dims = obs_dims
         self.action_dims = action_dims
-        self.latent_dims = latent_dims
+        self.skill_dims = skill_dims
         self.features_dim = features_dim
 
         self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features=100)
@@ -81,7 +81,7 @@ class ActorNetwork(nn.Module):
         self.en_linear_2 = nn.Linear(in_features=100, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.en_linear_2.weight.data)
        
-        self.fc1 = nn.Linear(in_features = self.features_dim + self.latent_dims, out_features = fc1_dims)
+        self.fc1 = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features = fc1_dims)
         nn.init.xavier_uniform_(self.fc1.weight.data)
 
         self.mu = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
@@ -91,8 +91,7 @@ class ActorNetwork(nn.Module):
         # nn.init.xavier_uniform_(self.logsigma.weight.data)
         nn.init.xavier_uniform_(self.sigma.weight.data)
 
-        self.optimizer = optim.Adam(self.parameters(), lr=lr)
-        # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        #self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
@@ -113,7 +112,7 @@ class ActorNetwork(nn.Module):
         mu, sigma = self.forward(observation, skill)
         # logsigma = T.clamp(logsigma, -20, 2)
         # sigma = logsigma.exp()
-        sigma = T.clamp(sigma, min=1e-6, max=1)
+        sigma = T.clamp(sigma, min=0.1, max=2)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
@@ -132,26 +131,26 @@ class ValueNetwork(nn.Module):
                  lr=3e-4,
                  obs_dims=261,
                  action_dims=2,
-                 latent_dims=2,
+                 skill_dims=2,
                  fc1_dims=6,
                  features_dim=18):
         super(ValueNetwork, self).__init__()
         self.lr = lr
         self.obs_dims = obs_dims
         self.action_dims = action_dims
-        self.latent_dims = latent_dims
+        self.skill_dims = skill_dims
         self.features_dim = features_dim
         self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features = 100)
-        nn.init.xavier_uiform_(self.en_linear_1.weight.data)
+        nn.init.xavier_uniform_(self.en_linear_1.weight.data)
         self.en_linear_2 = nn.Linear(in_features = self.obs_dims, out_features = 100)
-        nn.init.xavier_uiform_(self.en_linear_2.weight.data)
+        nn.init.xavier_uniform_(self.en_linear_2.weight.data)
 
-        self.fc1 = nn.Linear(in_features = self.features_dim + self.latent_dims, out_features=fc1_dims)
+        self.fc1 = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features=fc1_dims)
         nn.init.xavier_uniform_(self.fc1.weight.data)
         self.v = nn.Linear(in_features=fc1_dims, out_features=1)
         nn.init.xavier_uniform_(self.v.weight.data)
 
-        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        #self.optimizer = optim.Adam(self.parameters(), lr=lr)
         # self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
         self.to(self.device)
@@ -173,14 +172,14 @@ class CriticNetwork(nn.Module):
                  lr=3e-4,#3e-7
                  obs_dims = 261,
                  action_dims=2, 
-                 latent_dims=2, 
+                 skill_dims=2, 
                  fc1_dims=6, 
                  features_dim=18):
         super(CriticNetwork, self).__init__()
         self.lr = lr
         self.obs_dims = obs_dims
         self.action_dims = action_dims
-        self.latent_dims = latent_dims
+        self.skill_dims = skill_dims
         self.features_dim = features_dim
 
         self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features=100)
@@ -188,7 +187,7 @@ class CriticNetwork(nn.Module):
         self.en_linear_2 = nn.Linear(in_features=100, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.en_linear_2.weight.data)
 
-        self.fc1 = nn.Linear(in_features = self.features_dim + self.action_dims + self.latent_dims, out_features=fc1_dims)
+        self.fc1 = nn.Linear(in_features = self.features_dim + self.action_dims + self.skill_dims, out_features=fc1_dims)
         nn.init.xavier_uniform_(self.fc1.weight.data)
         self.q = nn.Linear(in_features=fc1_dims, out_features=1)
         nn.init.xavier_uniform_(self.q.weight.data)
@@ -214,21 +213,21 @@ class DoubleCriticNetwork(nn.Module):
                  lr=3e-4,#3e-7
                  obs_dims = 261,
                  action_dims=2, 
-                 latent_dims=2, 
+                 skill_dims=2, 
                  fc1_dims=6, 
                  features_dim=18):
         super(DoubleCriticNetwork, self).__init__()
         self.net1 = CriticNetwork(lr=lr,
                                   obs_dims=obs_dims,
                                   action_dims=action_dims,
-                                  latent_dims=latent_dims,
+                                  skill_dims=skill_dims,
                                   fc1_dims=fc1_dims,
                                   features_dim=features_dim)
         
         self.net2 = CriticNetwork(lr=lr,
                                   obs_dims=obs_dims,
                                   action_dims=action_dims,
-                                  latent_dims=latent_dims,
+                                  skill_dims=skill_dims,
                                   fc1_dims=fc1_dims,
                                   features_dim=features_dim)
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
@@ -246,13 +245,13 @@ class SkillDynamics(nn.Module):
     def __init__(self,
                  lr=3e-4,#3e-7
                  obs_dims = 261,
-                 latent_dims=2,
+                 skill_dims=2,
                  fc1_dims=6,
                  features_dim=18):
         super(SkillDynamics, self).__init__()
 
         self.lr = lr
-        self.latent_dims = latent_dims
+        self.skill_dims = skill_dims
         self.features_dim = features_dim
         self.obs_dims = obs_dims
 
@@ -260,9 +259,9 @@ class SkillDynamics(nn.Module):
         nn.init.xavier_uniform_(self.en_linear_1.weight.data)
         self.en_linear_2= nn.Linear(in_features=100, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.en_linear_2.weight.data)
-        self.de_mean = nn.Linear(in_features = self.features_dim + self.latent_dims, out_features = self.features_dim)
+        self.de_mean = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.de_mean.weight.data)
-        self.de_logsigma = nn.Linear(in_features = self.features_dim + self.latent_dims, out_features = self.features_dim)
+        self.de_logsigma = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.de_logsigma.weight.data)
 
         self.fc1 = nn.Linear(in_features = self.obs_dims, out_features=100)
@@ -336,6 +335,5 @@ class SkillDynamics(nn.Module):
 
     ## TODO: for get_log_probs(), check if we require - (negative) in front 
     def get_loss(self, observation, skill, next_observation, env_reward):
-        # return -self.get_log_probs(state, skill, next_state).mean()
         return -self.get_log_probs(observation, skill, next_observation, env_reward).mean(), self.get_reconstruction_loss(observation, skill, next_observation, env_reward)
         # return self.get_log_probs(observation, skill, next_observation).mean()
