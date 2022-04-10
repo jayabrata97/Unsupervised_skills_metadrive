@@ -39,8 +39,8 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, latent_di
     obs = env.reset()
     step_counter_local = 0
     skill = sample_skills(latent_dims)
+    cumulative_env_reward = 0
     while step_counter_local < steps_per_episode:
-        cumulative_env_reward = 0
         action = agent.choose_action(obs, skill)
         agent.step_counter += 1
         obs_, reward, done, info = env.step(action)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
             print(" step counter:",agent.step_counter, end='\r')
             writer.add_scalar("Cumulative env reward", cumulative_env_reward, step_counter)
 
-        sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128, shuffle=True) 
+        sd_data_loader = DataLoader(dataset=dads_buffer, batch_size=128) 
         for _ in range(K1):
             for observation_batch, skill_batch, next_observation_batch, env_reward_batch in sd_data_loader:
                 # loss = skill_dynamics.get_loss(state_batch, skill_batch, state_delta_batch)
