@@ -35,6 +35,7 @@ ep_reward = 0.0
 obs = env.reset()
 for i in range(10000):
     obs, reward, done, info = env.step(env.action_space.sample())
+    #print("obs type:",type(obs))
     print("step reward:",reward, end='\r')
     ep_reward += reward
     #if done:
