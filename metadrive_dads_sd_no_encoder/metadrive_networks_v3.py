@@ -63,7 +63,7 @@ class TanhTransform(Transform):
 
 class ActorNetwork(nn.Module):
     def __init__(self, 
-                 lr=3e-4, #3e-7
+                 lr=1e-4,#3e-4, #3e-7
                  obs_dims = 261,
                  action_dims = 2, 
                  skill_dims = 2, 
@@ -106,6 +106,7 @@ class ActorNetwork(nn.Module):
         # logsigma = self.logsigma(x)
         # return mu, logsigma, encoded_state
         sigma = self.sigma(x)
+        sigma = T.abs(sigma)  ##for preventing the negative values of std
         return mu, sigma
 
     def sample_normal(self, observation, skill, reparameterize=True):
@@ -128,7 +129,7 @@ class ActorNetwork(nn.Module):
 
 class ValueNetwork(nn.Module):
     def __init__(self,
-                 lr=3e-4,
+                 lr=1e-4,#3e-4,
                  obs_dims=261,
                  action_dims=2,
                  skill_dims=2,
@@ -142,7 +143,7 @@ class ValueNetwork(nn.Module):
         self.features_dim = features_dim
         self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features = 100)
         nn.init.xavier_uniform_(self.en_linear_1.weight.data)
-        self.en_linear_2 = nn.Linear(in_features = self.obs_dims, out_features = 100)
+        self.en_linear_2 = nn.Linear(in_features = 100, out_features = features_dim)
         nn.init.xavier_uniform_(self.en_linear_2.weight.data)
 
         self.fc1 = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features=fc1_dims)
@@ -283,8 +284,6 @@ class SkillDynamics(nn.Module):
         state = self.en_linear_1(observation)
         state = F.relu(state)
         encoded_state = self.en_linear_2(state)
-        #print(encoded_state.size(), end='\r')
-        #print(skill.size(), end='\r')
         x = T.cat((encoded_state, skill), dim=-1)
         de_mean = self.de_mean(x)
         de_logsigma = self.de_logsigma(x)
@@ -297,20 +296,16 @@ class SkillDynamics(nn.Module):
 
     def get_log_probs(self, observation, skill, next_observation, env_reward):  
         de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
-        #print("mean dimension is: ", de_mean.size())
-        #print("sigma dimension is: ", de_sigma.size())
         next_state = self.fc1(next_observation)
         next_state = self.fc2(next_state)
         de_probs = Normal(de_mean, de_sigma)
         log_probs = de_probs.log_prob((next_state)).sum(axis=-1, keepdim=True)
-        #print("log_probs dimension is: ", log_probs.size())
         log_probs.to(self.device)
         return log_probs
  
     def get_reconstruction_loss(self, observation, skill, next_observation, env_reward):
         de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
         #print("forward called for second time")
-        #print("\nnext_observation dim:", next_observation.size())
 
         for p, q in zip(self.en_linear_1.parameters(), self.recons_linear_1.parameters()):
             q.data.copy_(p.data)

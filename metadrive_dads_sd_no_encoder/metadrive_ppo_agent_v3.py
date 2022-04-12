@@ -1,5 +1,6 @@
 # proximal policy optimization agent for dads (modified to accept skills as input)
 
+from distutils.log import log
 import os
 import re
 from matplotlib import image
@@ -66,8 +67,8 @@ class ActorCritic(nn.Module):
     def evaluate(self, observation, skill, action):
         mu, sigma = self.actor.forward(observation, skill)
         dist = Normal(mu, sigma)
-        action_logprobs = dist.log_prob(action)
-        dist_entropy = dist.entropy()
+        action_logprobs = dist.log_prob(action).sum(axis=-1, keepdim=True)
+        dist_entropy = dist.entropy().sum(axis=-1, keepdim=True)
         state_values = self.critic.forward(observation, skill)
 
         return action_logprobs, state_values, dist_entropy
@@ -91,7 +92,7 @@ class PPOAgent():
                  chkpt_dir="models", 
                  name="dads_metadrive"):  
         self.env = env
-        #self.lr = lr
+        self.lr = lr
         self.obs_dims = obs_dims
         self.skill_dims = skill_dims
         self.features_dim = features_dim
@@ -100,10 +101,14 @@ class PPOAgent():
         self.gamma = gamma
         self.batch_size = batch_size
         self.K_epochs = K_epochs
+        self.max_size = max_size
         self.name = name
         self.checkpoint_dir = chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
         os.makedirs(self.checkpoint_file, exist_ok=True)
+        self.step_counter = 0
+        self.update_after = update_after
+        self.eps_clip = 0.2
 
         self.buffer = RLBuffer(max_size, obs_dims, n_actions, skill_dims)
         self.policy = ActorCritic(lr, obs_dims, n_actions, features_dim, skill_dims, actor_layers, critic_layers).to(device_1)
@@ -117,9 +122,11 @@ class PPOAgent():
 
     def select_action(self, observation, skill):
         with T.no_grad():
-            action, action_logprob = self.policy_old.act(self.lr, self.obs_dims, self.n_actions, self.skill_dims, self.actor_layers, self.features_dim)
+            observation_tensor = T.from_numpy(observation).float().to(device_1)
+            skill_tensor = T.from_numpy(skill).float().to(device_1)
+            action, action_logprob = self.policy_old.act(observation_tensor, skill_tensor)
 
-        return action, action_logprob
+        return action.detach().cpu().numpy(), action_logprob.detach().cpu().numpy()
     
     def remember(self, state, skill, action, action_logprob, reward, new_state, done):
         self.buffer.store_transition(state, skill, action, action_logprob, reward, new_state, done)
@@ -145,7 +152,9 @@ class PPOAgent():
             for old_states, old_skills, old_actions, old_logprobs, old_state_returns, _, _ in train_dataloader:
                 # Evaluate old actions and values
                 logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_skills, old_actions)
-            
+                old_logprobs = old_logprobs.unsqueeze(dim=1)
+                old_state_returns = old_state_returns.unsqueeze(dim=1)
+
                 # Finding the ratio (pi_theta / pi_theta__old)
                 ratios = T.exp(logprobs - old_logprobs.detach())
 
@@ -153,23 +162,33 @@ class PPOAgent():
                 advantages = old_state_returns - state_values.detach()   
                 surr1 = ratios * advantages
                 surr2 = T.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+                
+                # print(" logprobs shape: ", logprobs.size())
+                # print(" old_logprobs shape: ", old_logprobs.size())
+                # print(" ratios shape: ", ratios.size())
+                # print(" advantages shape: ", advantages.size())
+                # print(" state values shape: ", state_values.size())
+                # print(" old_state_returns shape: ", old_state_returns.size())
+                # print(" surr1 shape: ", surr1.size())
+                # print(" surr2 shape: ", surr2.size())
+                # print(" dist entropy shape:", dist_entropy.size())
 
                 # final loss of clipped objective PPO
                 total_loss = -T.min(surr1, surr2) + 0.5*self.MseLoss(state_values, old_state_returns) - 0.01*dist_entropy
-            
+
                 # take gradient step
                 self.optimizer.zero_grad()
                 total_loss.mean().backward()
                 self.optimizer.step()    
-                self.policy_loss = -T.min(surr1, surr2)
-                self.critic_loss = 0.5*self.MseLoss(state_values, old_state_returns)
-                self.dist_entropy = dist_entropy
+                self.policy_loss = -T.min(surr1, surr2).mean()
+                self.critic_loss = 0.5*self.MseLoss(state_values, old_state_returns).mean()
+                self.dist_entropy = dist_entropy.mean()
 
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         # clear buffer
-        self.buffer.clear()
+        self.buffer.clear(self.max_size, self.obs_dims, self.n_actions, self.skill_dims)
 
     def get_stats(self):
         return self.policy_loss.detach().item(), self.critic_loss.detach().item(), self.dist_entropy.detach().item()

@@ -72,11 +72,14 @@ class RLBuffer():
         skills = T.tensor(self.skill_memory[index], dtype=T.float, device=device_1)
         actions = T.tensor(self.action_memory[index], dtype=T.float, device=device_1)
         action_logprobs = T.tensor(self.action_logprob_memory[index], dtype=T.float, device=device_1)
-        state_returns = T.tensor(self.state_return[index], dtype=T.float, devvice=device_1)
+        state_returns = T.tensor(self.state_return[index], dtype=T.float, device=device_1)
         new_states = T.tensor(self.new_state_memory[index], dtype=T.float, device = device_1)
         dones = T.tensor(self.terminal_memory[index], dtype=T.float, device=device_1)
 
         return states, skills, actions, action_logprobs, state_returns, new_states, dones
+
+    def __len__(self):
+        return len(self.state_memory)
 
 # Replay buffer for training the skill dynamics
 
