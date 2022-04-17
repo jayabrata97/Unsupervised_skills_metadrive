@@ -63,7 +63,7 @@ class TanhTransform(Transform):
 
 class ActorNetwork(nn.Module):
     def __init__(self, 
-                 lr=1e-4,#3e-4, #3e-7
+                 lr=3e-4, #3e-7
                  obs_dims = 261,
                  action_dims = 2, 
                  skill_dims = 2, 
@@ -103,17 +103,17 @@ class ActorNetwork(nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         mu = self.mu(x)
-        # logsigma = self.logsigma(x)
-        # return mu, logsigma, encoded_state
-        sigma = self.sigma(x)
-        sigma = T.abs(sigma)  ##for preventing the negative values of std
+        # sigma = self.sigma(x)
+        # sigma = T.abs(sigma)  ##for preventing the negative values of std
+        logsigma = self.sigma(x)
+        sigma = logsigma.exp()
         return mu, sigma
 
     def sample_normal(self, observation, skill, reparameterize=True):
         mu, sigma = self.forward(observation, skill)
         # logsigma = T.clamp(logsigma, -20, 2)
         # sigma = logsigma.exp()
-        sigma = T.clamp(sigma, min=0.1, max=2)
+        sigma = T.clamp(sigma, min=0.3, max=2)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
@@ -129,7 +129,7 @@ class ActorNetwork(nn.Module):
 
 class ValueNetwork(nn.Module):
     def __init__(self,
-                 lr=1e-4,#3e-4,
+                 lr=1e-3,#1e-4,3e-4,
                  obs_dims=261,
                  action_dims=2,
                  skill_dims=2,
@@ -258,15 +258,20 @@ class SkillDynamics(nn.Module):
 
         self.en_linear_1 = nn.Linear(in_features = self.obs_dims, out_features=100)
         nn.init.xavier_uniform_(self.en_linear_1.weight.data)
+        #self.en_linear_1_bn = nn.BatchNorm1d(100)
         self.en_linear_2= nn.Linear(in_features=100, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.en_linear_2.weight.data)
+        #self.en_linear_2_bn = nn.BatchNorm1d(self.features_dim)
         self.de_mean = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.de_mean.weight.data)
+        #self.de_mean_bn = nn.BatchNorm1d(self.features_dim)
         self.de_logsigma = nn.Linear(in_features = self.features_dim + self.skill_dims, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.de_logsigma.weight.data)
+        #self.de_logsigma_bn = nn.BatchNorm1d(self.features_dim)
 
         self.fc1 = nn.Linear(in_features = self.obs_dims, out_features=100)
         nn.init.xavier_uniform_(self.fc1.weight.data)
+        #self.fc1_bn = nn.BatchNorm1d(100)
         self.fc2 = nn.Linear(in_features=100, out_features = self.features_dim)
         nn.init.xavier_uniform_(self.fc2.weight.data)
 
