@@ -73,14 +73,14 @@ class ActorCritic(nn.Module):
 
         return action_logprobs, state_values, dist_entropy
 
-class PPOAgent():
+class PPOAgent(nn.Module):
     def __init__(self, 
                  env, 
                  lr,
                  obs_dims,
                  features_dim, 
                  n_actions, 
-                 K_epochs=3,
+                 K_epochs=30,
                  skill_dims=2, 
                  gamma=0.99, 
                  max_size=10000, #1000
@@ -91,6 +91,7 @@ class PPOAgent():
                  update_after=1000, 
                  chkpt_dir="models", 
                  name="dads_metadrive"):  
+        super(PPOAgent, self).__init__()
         self.env = env
         self.lr = lr
         self.obs_dims = obs_dims
@@ -174,15 +175,19 @@ class PPOAgent():
                 # print(" dist entropy shape:", dist_entropy.size())
 
                 # final loss of clipped objective PPO
-                total_loss = -T.min(surr1, surr2) + 0.5*self.MseLoss(state_values, old_state_returns) - 0.01*dist_entropy
+                policy_loss = -T.min(surr1, surr2)
+                critic_loss = 0.5*self.MseLoss(state_values, old_state_returns)
+                total_loss = policy_loss + critic_loss - 0.01*dist_entropy
 
                 # take gradient step
                 self.optimizer.zero_grad()
                 total_loss.mean().backward()
                 self.optimizer.step()    
-                self.policy_loss = -T.min(surr1, surr2).mean()
-                self.critic_loss = 0.5*self.MseLoss(state_values, old_state_returns).mean()
-                self.dist_entropy = dist_entropy.mean()
+                
+                self.policy_loss = policy_loss.detach().mean()
+                self.critic_loss = critic_loss.detach().mean()
+                self.dist_entropy = dist_entropy.detach().mean()
+                self.advantages = advantages.detach().mean()
 
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
@@ -191,13 +196,13 @@ class PPOAgent():
         self.buffer.clear(self.max_size, self.obs_dims, self.n_actions, self.skill_dims)
 
     def get_stats(self):
-        return self.policy_loss.detach().item(), self.critic_loss.detach().item(), self.dist_entropy.detach().item()
+        return self.policy_loss.item(), self.critic_loss.item(), self.dist_entropy.item(), self.advantages.item()
 
     def save_models(self, ep=0, best=True):
         if best:
             print("Saving best model")
-            T.save(self.policy.actor, self.checkpoint_file+"/actor")
-            T.save(self.policy.critic, self.checkpoint_file+"/critic")
+            T.save(self.policy.actor, self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
+            T.save(self.policy.critic, self.checkpoint_file+"/PPOcritic_epc"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
         else:
             print("Saving regular model")
             T.save(self.policy.actor, self.checkpoint_file+"/actor_"+str(ep))
@@ -206,8 +211,8 @@ class PPOAgent():
     def load_models(self, ep=0, best=True):
         if best:
             print("Loading best model")
-            self.actor = T.load(self.checkpoint_file+"/actor")
-            self.critic = T.load(self.checkpoint_file+"/critic")
+            self.actor = T.load(self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
+            self.critic = T.load(self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
         else:
             print("Loading regular model")
             self.actor = T.load(self.checkpoint_file+"/actor_"+str(ep))
