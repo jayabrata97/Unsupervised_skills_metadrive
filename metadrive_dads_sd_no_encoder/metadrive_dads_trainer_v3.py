@@ -57,33 +57,33 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, skill_dim
     return buffer, step_counter, cumulative_env_reward
 
 # TODO: optimize this function
-# def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills):
-def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims):
-    L = 500 #100
+def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills):
+# def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims):
+    L = 9 #500 #100
     observations, skills, actions, action_logprobs, next_observations, env_rewards, dones = dads_buffer.sample_buffer()
-    # denom_skills = available_skills
-    denom_skills = T.tensor(np.random.randint(-1, 1+1, (L, skill_dims)), dtype=T.float, device=skill_dynamics.device)
+    denom_skills = available_skills
+    # denom_skills = T.tensor(np.random.randint(-1, 1+1, (L, skill_dims)), dtype=T.float, device=skill_dynamics.device)
 
     for i in range(len(observations)):
-        local_state_tensor = T.tensor([observations[i]], dtype=T.float, device=skill_dynamics.device)
-        local_skill_tensor = T.tensor([skills[i]], dtype=T.float, device=skill_dynamics.device)
+        local_state_tensor = T.tensor(np.array([observations[i]]), dtype=T.float, device=skill_dynamics.device)
+        local_skill_tensor = T.tensor(np.array([skills[i]]), dtype=T.float, device=skill_dynamics.device)
         # local_delta_state = T.tensor([state_delta[i]], dtype=T.float,device=skill_dynamics.device)
-        local_next_state_tensor = T.tensor([next_observations[i]], dtype=T.float, device=skill_dynamics.device)
-        local_env_reward = T.tensor([env_rewards[i]], dtype=T.float, device=skill_dynamics.device)
+        local_next_state_tensor = T.tensor(np.array([next_observations[i]]), dtype=T.float, device=skill_dynamics.device)
+        local_env_reward = T.tensor(np.array([env_rewards[i]]), dtype=T.float, device=skill_dynamics.device)
 
         # numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_delta_state).detach().cpu().numpy()[0][0]
-        numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_next_state_tensor, local_env_reward).detach().cpu().numpy()[0][0]
+        numerator = skill_dynamics.get_log_probs(local_state_tensor, local_skill_tensor, local_next_state_tensor, local_env_reward).exp().detach().cpu().numpy()[0][0]
         local_state_tensor = local_state_tensor.repeat(L,1)
         # local_delta_state = local_delta_state.repeat(L,1,1,1)
         local_next_state_tensor = local_next_state_tensor.repeat(L,1)
         # denom = skill_dynamics.get_log_probs(local_state_tensor, denom_skills, local_delta_state).detach().cpu().numpy().sum()
-        denom = skill_dynamics.get_log_probs(local_state_tensor, denom_skills, local_next_state_tensor, local_env_reward).detach().cpu().numpy().sum()
+        denom = skill_dynamics.get_log_probs(local_state_tensor, denom_skills, local_next_state_tensor, local_env_reward).exp().detach().cpu().numpy().sum()
         # if numerator == 0.0:
         #     numerator = 1e-3
         # if denom == 0.0:
         #     denom = 1e-3
         
-        intrinsic_reward = numerator/denom + np.log(L)
+        intrinsic_reward = np.log(numerator/denom) + np.log(L)
         # print("intrinsic reward: ", intrinsic_reward, end='\r')
         # print("local_env_reward[i] type: ", type(local_env_reward[i]))
         # print("local_env_reward[i] value: ", local_env_reward[i].item())
@@ -119,15 +119,15 @@ if __name__ == '__main__':
     M = 10
     K1 = 32
 
-    # available_skills = T.tensor([[1.0, 1.0],
-    #                              [1.0, 0.0],
-    #                              [1.0, -1.0],
-    #                              [0.0, 1.0],
-    #                              [0.0, 0.0],
-    #                              [0.0, -1.0],
-    #                              [-1.0, 1.0],
-    #                              [-1.0, 0.0],
-    #                              [-1.0, -1.0]], dtype=T.float, device=device_2)  ## trying with T.device('cuda:0')
+    available_skills = T.tensor([[1.0, 1.0],
+                                 [1.0, 0.0],
+                                 [1.0, -1.0],
+                                 [0.0, 1.0],
+                                 [0.0, 0.0],
+                                 [0.0, -1.0],
+                                 [-1.0, 1.0],
+                                 [-1.0, 0.0],
+                                 [-1.0, -1.0]], dtype=T.float, device=device_1)  ## trying with T.device('cuda:0')
 
     dads_buffer = DadsBuffer()
 
@@ -178,14 +178,14 @@ if __name__ == '__main__':
                 loss.backward()
                 skill_dynamics.optimizer.step()
 
-        # compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills)
-        compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims)
+        compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills)
+        # compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims)
         #for _ in range(128):
         agent.learn()
         agent.save_models()
-        T.save(skill_dynamics, './models/dads_metadrive/skill_dynamics')
+        T.save(skill_dynamics, './models/dads_metadrive/PPOskill_dynamics_eps0.2_epc30.pt')
         # critic_loss, policy_loss, alpha = agent.get_stats()
-        critic_loss, policy_loss, dist_entropy = agent.get_stats()
+        policy_loss, critic_loss, dist_entropy, advantages = agent.get_stats()
         print(" Critic loss: ",critic_loss)
         print(" Policy loss: ",policy_loss)
         print(" Distribution entropy: ", dist_entropy)
@@ -193,6 +193,7 @@ if __name__ == '__main__':
         writer.add_scalar("Policy Loss", policy_loss, step_counter)
         # writer.add_scalar("Alpha", alpha, step_counter)
         writer.add_scalar("Dist entropy", dist_entropy, step_counter)
+        writer.add_scalar("Advantages", advantages, step_counter)
         pbar.update(step_counter-tqdm_count)
         tqdm_count = step_counter
     pbar.close()
