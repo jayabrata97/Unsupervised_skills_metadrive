@@ -201,24 +201,24 @@ class PPOAgent(nn.Module):
     def save_models(self, ep=0, best=True):
         if best:
             print("Saving best model")
-            T.save(self.policy.actor, self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
-            T.save(self.policy.critic, self.checkpoint_file+"/PPOcritic_epc"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
+            T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L500.pt")
+            T.save(self.policy.critic.state_dict(), self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L500.pt")
         else:
             print("Saving regular model")
-            T.save(self.policy.actor, self.checkpoint_file+"/actor_"+str(ep))
-            T.save(self.policy.critic, self.checkpoint_file+"/critic_"+str(ep))
+            T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/actor_"+str(ep))
+            T.save(self.policy.critic.state_dict(), self.checkpoint_file+"/critic_"+str(ep))
 
     def load_models(self, ep=0, best=True):
         if best:
             print("Loading best model")
-            self.actor = T.load(self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
-            self.critic = T.load(self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+".pt")
+            self.actor = T.load(self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L500.pt")
+            self.critic = T.load(self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L500.pt")
         else:
             print("Loading regular model")
             self.actor = T.load(self.checkpoint_file+"/actor_"+str(ep))
             self.critic = T.load(self.checkpoint_file+"/critic_"+str(ep))
 
-
+###########################################################################################################################################################
 # class OLdSACAgent():
 #     def __init__(self, 
 #                  env, 
