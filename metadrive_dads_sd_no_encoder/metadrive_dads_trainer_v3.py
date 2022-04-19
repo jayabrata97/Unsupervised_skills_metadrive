@@ -57,12 +57,12 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, skill_dim
     return buffer, step_counter, cumulative_env_reward
 
 # TODO: optimize this function
-def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills):
-# def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims):
-    L = 9 #500 #100
+# def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills):
+def compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims):
+    L = 500 #100
     observations, skills, actions, action_logprobs, next_observations, env_rewards, dones = dads_buffer.sample_buffer()
-    denom_skills = available_skills
-    # denom_skills = T.tensor(np.random.randint(-1, 1+1, (L, skill_dims)), dtype=T.float, device=skill_dynamics.device)
+    # denom_skills = available_skills
+    denom_skills = T.tensor(np.random.randint(-1, 1+1, (L, skill_dims)), dtype=T.float, device=skill_dynamics.device)
 
     for i in range(len(observations)):
         local_state_tensor = T.tensor(np.array([observations[i]]), dtype=T.float, device=skill_dynamics.device)
@@ -119,15 +119,15 @@ if __name__ == '__main__':
     M = 10
     K1 = 32
 
-    available_skills = T.tensor([[1.0, 1.0],
-                                 [1.0, 0.0],
-                                 [1.0, -1.0],
-                                 [0.0, 1.0],
-                                 [0.0, 0.0],
-                                 [0.0, -1.0],
-                                 [-1.0, 1.0],
-                                 [-1.0, 0.0],
-                                 [-1.0, -1.0]], dtype=T.float, device=device_1)  ## trying with T.device('cuda:0')
+    # available_skills = T.tensor([[1.0, 1.0],
+    #                              [1.0, 0.0],
+    #                              [1.0, -1.0],
+    #                              [0.0, 1.0],
+    #                              [0.0, 0.0],
+    #                              [0.0, -1.0],
+    #                              [-1.0, 1.0],
+    #                              [-1.0, 0.0],
+    #                              [-1.0, -1.0]], dtype=T.float, device=device_1)  ## trying with T.device('cuda:0')
 
     dads_buffer = DadsBuffer()
 
@@ -178,12 +178,12 @@ if __name__ == '__main__':
                 loss.backward()
                 skill_dynamics.optimizer.step()
 
-        compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills)
-        # compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims)
+        # compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, available_skills)
+        compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims)
         #for _ in range(128):
         agent.learn()
         agent.save_models()
-        T.save(skill_dynamics, './models/dads_metadrive/PPOskill_dynamics_eps0.2_epc30.pt')
+        T.save(skill_dynamics.state_dict(), './models/dads_metadrive/PPOskill_dynamics_eps0.2_epc30_L500.pt')
         # critic_loss, policy_loss, alpha = agent.get_stats()
         policy_loss, critic_loss, dist_entropy, advantages = agent.get_stats()
         print(" Critic loss: ",critic_loss)
