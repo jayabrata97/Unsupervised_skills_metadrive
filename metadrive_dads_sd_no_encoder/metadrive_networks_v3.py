@@ -296,11 +296,12 @@ class SkillDynamics(nn.Module):
         de_sigma = T.clamp(de_sigma, 0.4, 10)
         de_probs = Normal(de_mean, de_sigma)
         predicted_next_state = de_probs.rsample()
+        predicted_cost = self.fc3(predicted_next_state)
 
-        return de_mean, de_sigma, predicted_next_state
+        return de_mean, de_sigma, predicted_next_state, predicted_cost
 
     def get_log_probs(self, observation, skill, next_observation, env_reward):  
-        de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
+        de_mean, de_sigma, predicted_next_state, predicted_cost = self.forward(observation, skill)
         next_state = self.fc1(next_observation)
         next_state = self.fc2(next_state)
         de_probs = Normal(de_mean, de_sigma)
@@ -309,7 +310,7 @@ class SkillDynamics(nn.Module):
         return log_probs
  
     def get_reconstruction_loss(self, observation, skill, next_observation, env_reward):
-        de_mean, de_sigma, predicted_next_state = self.forward(observation, skill)
+        de_mean, de_sigma, predicted_next_state, predicted_cost = self.forward(observation, skill)
         #print("forward called for second time")
 
         for p, q in zip(self.en_linear_1.parameters(), self.recons_linear_1.parameters()):
@@ -326,7 +327,6 @@ class SkillDynamics(nn.Module):
         next_state = self.recons_linear_2(next_state)
         loss = nn.MSELoss()
         reconstruction_loss = loss(next_state, predicted_next_state)
-        predicted_cost = self.fc3(predicted_next_state)
         env_reward = env_reward.unsqueeze(1)
         env_reward = env_reward.float()
         cost_func_loss = loss(predicted_cost, env_reward)
