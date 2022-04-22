@@ -123,11 +123,11 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
 
 if __name__ == "__main__":
     skill_dynamics= SkillDynamics()
-    skill_dynamics = T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOskill_dynamics_eps0.2_epc30_L500.pt')
+    skill_dynamics.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOskill_dynamics_eps0.2_epc30_L500.pt'))
     #print(skill_dynamics)
     skill_dynamics = skill_dynamics.eval()
     actor = ActorNetwork()
-    actor = T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOactor_eps0.2_epc30_L500.pt')
+    actor.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOactor_eps0.2_epc30_L500.pt'))
     #print(actor)
     actor = actor.eval()
 
