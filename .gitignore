@@ -1,5 +1,4 @@
 __pycache__/
-models/
 runs/
 metadrive-simulator-0.2.4/metadrive/utils/__pycache__/
 metadrive-simulator-0.2.4/metadrive/policy/__pycache__/
