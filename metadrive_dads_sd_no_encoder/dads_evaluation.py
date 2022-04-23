@@ -57,6 +57,7 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
     crash_vehicle_rate = 0
     while episode_count < num_episodes:
         obs = env.reset()
+        obs = T.tensor(obs, dtype=T.float, device=skill_dynamics.device)
         done = False
         #########################################
         # Code for skill trajectories
@@ -78,29 +79,33 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
         while done != True:
             velocity = []
             #cost = 0  #cost for SafeMetaDrive
-            obs = T.tensor(obs, dtype=T.float, device=skill_dynamics.device)
-            print(obs)
+            #print(obs)
             costs = []
             for skill in available_skills:
                 _, _, predicted_next_state, predicted_cost = skill_dynamics.forward(obs, skill)
                 costs.append(predicted_cost)
             chosen_skill_index = costs.index(max(costs))
             chosen_skill = available_skills[chosen_skill_index]
+            # print(' chosen skill:', chosen_skill)
             for j in range(0, primitive_holding):
                 action, _ = actor.sample_normal(obs, chosen_skill)
                 obs, reward, done, info = env.step(action)
+                obs = T.tensor(obs, dtype=T.float, device=skill_dynamics.device)
                 episode_reward += reward
                 episode_length = episode_length+1
                 velocity.append(info["velocity"])
                 if info["arrive_dest"]:
                     # ret_success_rate.append(1)
                     success_rate += 1
+                    print(' success_rate: ', success_rate)
                 if info["out_of_road"]:
                     # ret_out_rate.append(1)
                     out_rate += 1
+                    print(' out_rate: ',out_rate, end='\r')
                 if info["crash_vehicle"]:
                     # ret_crash_vehicle_rate.append(1)
                     crash_vehicle_rate += 1    
+                    print(' crash_vehicle_rate: ',crash_vehicle_rate)
                 if done:
                     break
 
@@ -109,8 +114,8 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
         ret_length.append(episode_length)
 
     ret = dict(
-        reward = np.mean(ret_reward),
-        length = np.mean(ret_length),
+        avg_episode_reward = np.mean(ret_reward),
+        avg_episode_length = np.mean(ret_length),
         # success_rate = np.mean(ret_success_rate),
         # out_rate = np.mean(ret_out_rate),
         # crash_vehicle_rate = np.mean(ret_crash_vehicle_rate),
@@ -145,7 +150,7 @@ if __name__ == "__main__":
         map=3,#7
     ))
 
-    num_episodes = 20
+    num_episodes = 500
 
     ret = evaluate(skill_dynamics, actor, num_episodes, env)
     print("Evaluation result: {}".format(ret))
