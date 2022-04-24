@@ -4,9 +4,9 @@ import gym
 import numpy as np
 from scipy import stats
 # from gym.wrappers import RescaleAction
-from metadrive_buffer_v3 import DadsBuffer
+#from metadrive_buffer_v3 import DadsBuffer
 from metadrive_networks_v3 import *
-from metadrive_ppo_agent_v3 import PPOAgent
+#from metadrive_ppo_agent_v3 import PPOAgent
 from metadrive import MetaDriveEnv
 #from metadrive import SafeMetaDriveEnv
 from metadrive.constants import TerminationState
@@ -19,9 +19,9 @@ from tqdm import tqdm
 import os
 import time
 
-device_ids = [2,3]
-device_1 = f'cuda:{device_ids[0]}'
-device_2 = f'cuda:{device_ids[1]}'
+# device_ids = [2,3]
+# device_1 = f'cuda:{device_ids[0]}'
+# device_2 = f'cuda:{device_ids[1]}'
 
 def sample_skills(skill_dim):
     a = np.array([-1.0, 0.0, 1.0])
@@ -50,7 +50,7 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
                                 [0.0, -1.0],
                                 [-1.0, 1.0],
                                 [-1.0, 0.0],
-                                [-1.0, -1.0]], dtype=T.float, device=device_1)
+                                [-1.0, -1.0]], dtype=T.float, device='cuda:0') #device_1
 
     success_rate = 0
     out_rate = 0
@@ -128,11 +128,13 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
 
 if __name__ == "__main__":
     skill_dynamics= SkillDynamics()
-    skill_dynamics.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOskill_dynamics_eps0.2_epc30_L500.pt'))
+    # skill_dynamics.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOskill_dynamics_eps0.2_epc30_L500.pt'))
+    skill_dynamics.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOskill_dynamics_eps0.2_epc30_L9.pt',map_location='cuda:0'))
     #print(skill_dynamics)
     skill_dynamics = skill_dynamics.eval()
     actor = ActorNetwork()
-    actor.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOactor_eps0.2_epc30_L500.pt'))
+    # actor.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOactor_eps0.2_epc30_L500.pt'))
+    actor.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOactor_eps0.2_epc30_L9.pt',map_location='cuda:0'))
     #print(actor)
     actor = actor.eval()
 
@@ -150,7 +152,7 @@ if __name__ == "__main__":
         map=3,#7
     ))
 
-    num_episodes = 500
+    num_episodes = 20
 
     ret = evaluate(skill_dynamics, actor, num_episodes, env)
     print("Evaluation result: {}".format(ret))
