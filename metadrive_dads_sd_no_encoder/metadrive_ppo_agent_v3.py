@@ -12,8 +12,8 @@ import torch.nn.functional as F
 from torch.distributions import Normal, TransformedDistribution
 from torch.distributions.transforms import Transform
 from torch.utils.data import TensorDataset, DataLoader
-from metadrive_buffer_v3 import RLBuffer
-from metadrive_networks_v3 import ActorNetwork, ValueNetwork
+from metadrive_PPO_buffer_v3 import RLBuffer
+from metadrive_PPO_networks_v3 import ActorNetwork, ValueNetwork
 
 device_ids = [2,3]
 device_1 = f'cuda:{device_ids[0]}'
