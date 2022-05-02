@@ -98,10 +98,12 @@ class ActorCritic(nn.Module):
         raise NotImplementedError
     
     def act(self, observation, skill, step_counter_local, step_counter):
+        global previous_action
         dummy_action, dummy_action_logprob, mu, sigma = self.actor.sample_normal(observation, skill, reparameterize=True)
         if step_counter < 30000:
             if (step_counter_local % 25) == 0:
                 action = sample_action(skill)
+                action = action.to(self.device)
                 sigma = T.clamp(sigma, min=0.3, max=2)
                 probabilities = Normal(mu, sigma)
                 transforms = [TanhTransform(cache_size=1)]
@@ -119,6 +121,7 @@ class ActorCritic(nn.Module):
                     action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
                 else:
                     action[1] = dummy_action[1]
+                action = action.to(self.device)
                 sigma = T.clamp(sigma, min=0.3, max=2)
                 probabilities = Normal(mu, sigma)
                 transforms = [TanhTransform(cache_size=1)]
@@ -129,7 +132,9 @@ class ActorCritic(nn.Module):
         else:
             if (step_counter_local == 0):
                 action = dummy_action
+                action = action.to(self.device)
                 action_logprob = dummy_action_logprob
+                action_logprob = action_logprob.to(self.device)
                 previous_action = action
             else:
                 action = T.zeros(2)
@@ -141,6 +146,7 @@ class ActorCritic(nn.Module):
                     action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
                 else:
                     action[1] = dummy_action[1]
+                action = action.to(self.device)
                 sigma = T.clamp(sigma, min=0.3, max=2)
                 probabilities = Normal(mu, sigma)
                 transforms = [TanhTransform(cache_size=1)]
