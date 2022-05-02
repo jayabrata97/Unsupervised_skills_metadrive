@@ -126,7 +126,7 @@ class ActorNetwork(nn.Module):
         log_probs = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
         log_probs.to(self.device)
         
-        return action, log_probs
+        return action, log_probs, mu, sigma
 
 class ValueNetwork(nn.Module):
     def __init__(self,

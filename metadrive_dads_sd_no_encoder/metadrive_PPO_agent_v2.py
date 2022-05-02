@@ -13,30 +13,66 @@ from torch.distributions import Normal, TransformedDistribution
 from torch.distributions.transforms import Transform
 from torch.utils.data import TensorDataset, DataLoader
 from metadrive_PPO_buffer_v2 import RLBuffer
-from metadrive_PPO_networks_v2 import ActorNetwork, ValueNetwork
+from metadrive_PPO_networks_v2 import ActorNetwork, ValueNetwork, TanhTransform
 
 device_ids = [2,3]
 device_1 = f'cuda:{device_ids[0]}'
 device_2 = f'cuda:{device_ids[1]}'
 #T.cuda.empty_cache()
 
+# def sample_action(skills):
+#     #lateral action
+#     if skills[0] == -1.0:
+#         steer = np.random.uniform(-1.0, -0.125, (1))
+#     elif skills[0] == 0.0:
+#         steer = np.random.uniform(-0.125, 0.125, (1))
+#     else:
+#         steer = np.random.uniform(0.125, 1.0, (1))
+#     #longitudinal action
+#     if skills[1] == -1.0:
+#         acc = np.random.uniform(-1.0, -0.2, (1))
+#     elif skills[1] == 0.0:
+#         acc = np.random.uniform(-0.2, 0.2, (1))
+#     else:
+#         acc = np.random.uniform(0.2, 1.0, (1))
+    
+#     action = np.concatenate((steer, acc))
+#     action = T.from_numpy(action)
+
+#     return action
+
 def sample_action(skills):
     #lateral action
-    if skills[0] == -1.0:
-        steer = np.random.uniform(-1.0, -0.2, (1))
-    elif skills[0] == 0.0:
-        steer = np.random.uniform(-0.2, 0.2, (1))
-    else:
-        steer = np.random.uniform(0.2, 1.0, (1))
-    #longitudinal action
-    if skills[1] == -1.0:
-        acc = np.random.uniform(-1.0, -0.2, (1))
-    elif skills[1] == 0.0:
-        acc = np.random.uniform(-0.2, 0.2, (1))
-    else:
-        acc = np.random.uniform(0.2, 1.0, (1))
-    
+    if skills[1] == 0.0 and skills[0] == 0.0: #cruise, same
+        steer = np.random.uniform(-0.05, 0.05, (1))
+        acc = np.random.uniform(-0.4, 0.4, (1))
+    elif skills[1] == 0.0 and skills[0] == -1.0: #cruise, left
+        steer = np.random.uniform(-0.5, -0.25, (1))
+        acc = np.random.uniform(-0.4, 0.4, (1))
+    elif skills[1] == 0.0 and skills[0] == 1.0: #cruise, right
+        steer = np.random.uniform(0.25, 0.5, (1))
+        acc = np.random.uniform(-0.4, 0.4, (1))
+    elif skills[1] == 1.0 and skills[0] == 0.0: #accelerate, same
+        steer = np.random.uniform(-0.05, 0.05, (1))
+        acc = np.random.uniform(0.4, 1.0, (1))
+    elif skills[1] == 1.0 and skills[0] == -1.0: #accelerate, left
+        steer = np.random.uniform(-0.25, -0.05, (1))
+        acc = np.random.uniform(0.4, 1.0, (1))
+    elif skills[1] == 1.0 and skills[0] == 1.0: #accelerate, right
+        steer = np.random.uniform(0.05, 0.25, (1))
+        acc = np.random.uniform(0.4, 1.0, (1))
+    elif skills[1] == -1.0 and skills[0] == 0.0: #decelerate, same
+        steer = np.random.uniform(-0.05, 0.05, (1))
+        acc = np.random.uniform(-1, -0.4, (1))
+    elif skills[1] == -1.0 and skills[0] == -1.0: #decelerate, left
+        steer = np.random.uniform(-1, -0.25, (1))
+        acc = np.random.uniform(-1, -0.4, (1))
+    else: #decelerate, right
+        steer = np.random.uniform(0.25, 1, (1))
+        acc = np.random.uniform(-1, -0.4, (1))
+
     action = np.concatenate((steer, acc))
+    action = T.from_numpy(action)
 
     return action
 
@@ -56,12 +92,63 @@ class ActorCritic(nn.Module):
         # critic
         self.critic = ValueNetwork(lr, obs_dims, n_actions, skill_dims, critic_layers, features_dim)
 
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
+
     def forward(self):
         raise NotImplementedError
     
-    def act(self, observation, skill):
-        action, action_logprob = self.actor.sample_normal(observation, skill, reparameterize=True)
-        
+    def act(self, observation, skill, step_counter_local, step_counter):
+        dummy_action, dummy_action_logprob, mu, sigma = self.actor.sample_normal(observation, skill, reparameterize=True)
+        if step_counter < 30000:
+            if (step_counter_local % 25) == 0:
+                action = sample_action(skill)
+                sigma = T.clamp(sigma, min=0.3, max=2)
+                probabilities = Normal(mu, sigma)
+                transforms = [TanhTransform(cache_size=1)]
+                probabilities = TransformedDistribution(probabilities, transforms)
+                action_logprob = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
+                action_logprob.to(self.device)
+                previous_action = action
+            else:
+                action = T.zeros(2)
+                if abs(dummy_action[0]-previous_action[0]) >= 0.05:
+                    action[0] = T.clamp(action[0], min=action[0]-0.05, max=action[0]+0.05) 
+                else:
+                    action[0] = dummy_action[0] 
+                if abs(dummy_action[1]-previous_action[1]) >= 0.2:
+                    action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
+                else:
+                    action[1] = dummy_action[1]
+                sigma = T.clamp(sigma, min=0.3, max=2)
+                probabilities = Normal(mu, sigma)
+                transforms = [TanhTransform(cache_size=1)]
+                probabilities = TransformedDistribution(probabilities, transforms)
+                action_logprob = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
+                action_logprob.to(self.device)
+                previous_action = action
+        else:
+            if (step_counter_local == 0):
+                action = dummy_action
+                action_logprob = dummy_action_logprob
+                previous_action = action
+            else:
+                action = T.zeros(2)
+                if abs(dummy_action[0]-previous_action[0]) >= 0.05:
+                    action[0] = T.clamp(action[0], min=action[0]-0.05, max=action[0]+0.05) 
+                else:
+                    action[0] = dummy_action[0] 
+                if abs(dummy_action[1]-previous_action[1]) >= 0.2:
+                    action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
+                else:
+                    action[1] = dummy_action[1]
+                sigma = T.clamp(sigma, min=0.3, max=2)
+                probabilities = Normal(mu, sigma)
+                transforms = [TanhTransform(cache_size=1)]
+                probabilities = TransformedDistribution(probabilities, transforms)
+                action_logprob = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
+                action_logprob.to(self.device)
+                previous_action = action
+
         return action.detach(), action_logprob.detach()
     
     def evaluate(self, observation, skill, action):
@@ -121,11 +208,11 @@ class PPOAgent(nn.Module):
         self.policy_old.load_state_dict(self.policy.state_dict())
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, observation, skill):
+    def select_action(self, observation, skill, step_counter_local, step_counter):
         with T.no_grad():
             observation_tensor = T.from_numpy(observation).float().to(device_1)
             skill_tensor = T.from_numpy(skill).float().to(device_1)
-            action, action_logprob = self.policy_old.act(observation_tensor, skill_tensor)
+            action, action_logprob = self.policy_old.act(observation_tensor, skill_tensor, step_counter_local, step_counter)
 
         return action.detach().cpu().numpy(), action_logprob.detach().cpu().numpy()
     

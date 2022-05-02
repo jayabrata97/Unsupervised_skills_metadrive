@@ -38,15 +38,17 @@ def sample_skills(skill_dim):
 def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, skill_dims, step_counter):
     obs = env.reset()
     step_counter_local = 0
-    skill = sample_skills(skill_dims)
     cumulative_env_reward = 0
+    skill = sample_skills(skill_dims)
     while step_counter_local < steps_per_episode:
-        action, action_logprob = agent.select_action(obs, skill)
+        action, action_logprob = agent.select_action(obs, skill, step_counter_local, step_counter)     
         agent.step_counter += 1
         obs_, reward, done, info = env.step(action)
         step_counter_local += 1
         step_counter += 1
         cumulative_env_reward += reward
+        if step_counter_local % 25 == 0:
+            skill = sample_skills(skill_dims)
 
         # buffer.store_transition(obs, action, obs_, done, skill, obs_-obs)
         buffer.store_transition(obs, action, action_logprob, reward, obs_, done, skill)
@@ -85,7 +87,7 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, st
         if step_counter < 2e6:
             total_reward = env_rewards[i]
         else:
-            intrinsic_reward = np.log(numerator/denom) + np.log(L)
+            intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
             total_reward = intrinsic_reward + env_rewards[i]
         #agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
         agent.remember(observations[i], skills[i], actions[i], action_logprobs[i], total_reward, next_observations[i], dones[i])
@@ -116,14 +118,14 @@ if __name__ == '__main__':
     M = 10
     K1 = 32
 
-    available_skills = T.tensor([[1.0, 1.0],
-                                 [1.0, 0.0],
-                                 [1.0, -1.0],
-                                 [0.0, 1.0],
-                                 [0.0, 0.0],
-                                 [0.0, -1.0],
-                                 [-1.0, 1.0],
-                                 [-1.0, 0.0],
+    available_skills = T.tensor([[1.0, 1.0], #accelerate, right
+                                 [1.0, 0.0], #accelerate, same lane
+                                 [1.0, -1.0], #accelerate, left lane
+                                 [0.0, 1.0], #cruise, right lane
+                                 [0.0, 0.0], #cruise, same lane
+                                 [0.0, -1.0], #cruise, left lane
+                                 [-1.0, 1.0], #decelerate, right lane
+                                 [-1.0, 0.0], #decelerate, same lane
                                  [-1.0, -1.0]], dtype=T.float, device=device_1)  ## trying with T.device('cuda:0')
 
     dads_buffer = DadsBuffer()
