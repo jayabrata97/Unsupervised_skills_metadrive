@@ -20,29 +20,7 @@ device_1 = f'cuda:{device_ids[0]}'
 device_2 = f'cuda:{device_ids[1]}'
 #T.cuda.empty_cache()
 
-# def sample_action(skills):
-#     #lateral action
-#     if skills[0] == -1.0:
-#         steer = np.random.uniform(-1.0, -0.125, (1))
-#     elif skills[0] == 0.0:
-#         steer = np.random.uniform(-0.125, 0.125, (1))
-#     else:
-#         steer = np.random.uniform(0.125, 1.0, (1))
-#     #longitudinal action
-#     if skills[1] == -1.0:
-#         acc = np.random.uniform(-1.0, -0.2, (1))
-#     elif skills[1] == 0.0:
-#         acc = np.random.uniform(-0.2, 0.2, (1))
-#     else:
-#         acc = np.random.uniform(0.2, 1.0, (1))
-    
-#     action = np.concatenate((steer, acc))
-#     action = T.from_numpy(action)
-
-#     return action
-
 def sample_action(skills):
-    #lateral action
     if skills[1] == 0.0 and skills[0] == 0.0: #cruise, same
         steer = np.random.uniform(-0.05, 0.05, (1))
         acc = np.random.uniform(-0.4, 0.4, (1))
@@ -72,7 +50,8 @@ def sample_action(skills):
         acc = np.random.uniform(-1, -0.4, (1))
 
     action = np.concatenate((steer, acc))
-    action = T.from_numpy(action)
+    # action = T.from_numpy(action)
+    action = T.Tensor(action)
 
     return action
 
@@ -111,17 +90,29 @@ class ActorCritic(nn.Module):
                 action_logprob = probabilities.log_prob(action).sum(axis=-1, keepdim=True)
                 action_logprob.to(self.device)
                 previous_action = action
+                # print(" first previous action:",previous_action)
+                # print(" dtype of first previous action: ", previous_action.dtype)
             else:
                 action = T.zeros(2)
-                if abs(dummy_action[0]-previous_action[0]) >= 0.05:
-                    action[0] = T.clamp(action[0], min=action[0]-0.05, max=action[0]+0.05) 
+                print(" second previous action:",previous_action)
+                if abs(dummy_action[0]-previous_action[0]) > 0.05:
+                    if dummy_action[0] > previous_action[0]:
+                        action[0] = previous_action[0] + 0.05
+                    else:
+                        action[0] = previous_action[0] - 0.05
                 else:
                     action[0] = dummy_action[0] 
-                if abs(dummy_action[1]-previous_action[1]) >= 0.2:
-                    action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
+                if abs(dummy_action[1]-previous_action[1]) > 0.2:
+                    if dummy_action[1] > previous_action[1]:
+                        action[1] = previous_action[1] + 0.2
+                    else:
+                        action[1] = previous_action[1] - 0.2
                 else:
                     action[1] = dummy_action[1]
                 action = action.to(self.device)
+                # print(" dummy action: ", dummy_action)
+                # print(" action: ",action)
+                # print(" action dtype: ", action.dtype)
                 sigma = T.clamp(sigma, min=0.3, max=2)
                 probabilities = Normal(mu, sigma)
                 transforms = [TanhTransform(cache_size=1)]
@@ -136,17 +127,26 @@ class ActorCritic(nn.Module):
                 action_logprob = dummy_action_logprob
                 action_logprob = action_logprob.to(self.device)
                 previous_action = action
+                # print(" first previous action:",previous_action)
             else:
                 action = T.zeros(2)
-                if abs(dummy_action[0]-previous_action[0]) >= 0.05:
-                    action[0] = T.clamp(action[0], min=action[0]-0.05, max=action[0]+0.05) 
+                print(" second previous action:",previous_action)
+                if abs(dummy_action[0]-previous_action[0]) > 0.05:
+                    if dummy_action[0] > previous_action[0]:
+                        action[0] = previous_action[0] + 0.05
+                    else:
+                        action[0] = previous_action[0] - 0.05
                 else:
                     action[0] = dummy_action[0] 
-                if abs(dummy_action[1]-previous_action[1]) >= 0.2:
-                    action[1] = T.clamp(action[1], min=action[1]-0.2, max=action[1]+0.2) 
+                if abs(dummy_action[1]-previous_action[1]) > 0.2:
+                    if dummy_action[1] > previous_action[1]:
+                        action[1] = previous_action[1] + 0.2
+                    else:
+                        action[1] = previous_action[1] - 0.2
                 else:
                     action[1] = dummy_action[1]
                 action = action.to(self.device)
+                # print(" action: ",action)
                 sigma = T.clamp(sigma, min=0.3, max=2)
                 probabilities = Normal(mu, sigma)
                 transforms = [TanhTransform(cache_size=1)]
