@@ -94,7 +94,7 @@ class ActorCritic(nn.Module):
                 # print(" dtype of first previous action: ", previous_action.dtype)
             else:
                 action = T.zeros(2)
-                print(" second previous action:",previous_action)
+                # print(" second previous action:",previous_action)
                 if abs(dummy_action[0]-previous_action[0]) > 0.05:
                     if dummy_action[0] > previous_action[0]:
                         action[0] = previous_action[0] + 0.05
@@ -130,7 +130,7 @@ class ActorCritic(nn.Module):
                 # print(" first previous action:",previous_action)
             else:
                 action = T.zeros(2)
-                print(" second previous action:",previous_action)
+                # print(" second previous action:",previous_action)
                 if abs(dummy_action[0]-previous_action[0]) > 0.05:
                     if dummy_action[0] > previous_action[0]:
                         action[0] = previous_action[0] + 0.05
