@@ -4,9 +4,9 @@ import gym
 import numpy as np
 from scipy import stats
 # from gym.wrappers import RescaleAction
-#from metadrive_buffer_v3 import DadsBuffer
-from metadrive_networks_v3 import *
-#from metadrive_ppo_agent_v3 import PPOAgent
+#from metadrive_PPO_buffer_v2 import DadsBuffer
+from metadrive_PPO_networks_v2 import *
+#from metadrive_PPO_agent_v2 import PPOAgent
 from metadrive import MetaDriveEnv
 #from metadrive import SafeMetaDriveEnv
 from metadrive.constants import TerminationState

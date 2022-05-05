@@ -84,14 +84,20 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, st
         #     numerator = 1e-3
         # if denom == 0.0:
         #     denom = 1e-3
-        if step_counter < 2e6:
+        if step_counter < 1e6:
+            intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
             total_reward = env_rewards[i]
-        else:
+        elif step_counter >= 1e6 and step_counter < 2e6:
             intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
             total_reward = intrinsic_reward + env_rewards[i]
+        else:
+            intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
+            total_reward = env_rewards[i]
         #agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
         agent.remember(observations[i], skills[i], actions[i], action_logprobs[i], total_reward, next_observations[i], dones[i])
     dads_buffer.clear_buffer()
+
+    return intrinsic_reward
 
 if __name__ == '__main__':
     writer = SummaryWriter()
@@ -177,8 +183,9 @@ if __name__ == '__main__':
                 loss.backward()
                 skill_dynamics.optimizer.step()
 
-        compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, step_counter)
+        intrinsic_reward = compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, step_counter)
         # compute_dads_reward(agent, skill_dynamics, dads_buffer, skill_dims, step_counter)
+        writer.add_scalar("Intrinsic reward", intrinsic_reward, step_counter)
         #for _ in range(128):
         agent.learn()
         agent.save_models()

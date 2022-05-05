@@ -79,7 +79,7 @@ class ActorCritic(nn.Module):
     def act(self, observation, skill, step_counter_local, step_counter):
         global previous_action
         dummy_action, dummy_action_logprob, mu, sigma = self.actor.sample_normal(observation, skill, reparameterize=True)
-        if step_counter < 30000:
+        if step_counter < 1e5:
             if (step_counter_local % 25) == 0:
                 action = sample_action(skill)
                 action = action.to(self.device)

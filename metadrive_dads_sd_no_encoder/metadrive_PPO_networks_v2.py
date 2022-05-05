@@ -85,11 +85,11 @@ class ActorNetwork(nn.Module):
         nn.init.xavier_uniform_(self.fc1.weight.data)
 
         self.mu = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
-        # self.logsigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
-        self.sigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
+        self.logsigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
+        # self.sigma = nn.Linear(in_features = fc1_dims, out_features = self.action_dims)
         nn.init.xavier_uniform_(self.mu.weight.data)
-        # nn.init.xavier_uniform_(self.logsigma.weight.data)
-        nn.init.xavier_uniform_(self.sigma.weight.data)
+        nn.init.xavier_uniform_(self.logsigma.weight.data)
+        # nn.init.xavier_uniform_(self.sigma.weight.data)
 
         #self.optimizer = optim.Adam(self.parameters(), lr=lr)
         self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
@@ -106,15 +106,13 @@ class ActorNetwork(nn.Module):
         mu = self.mu(x)
         # sigma = self.sigma(x)
         # sigma = T.abs(sigma)  ##for preventing the negative values of std
-        logsigma = self.sigma(x)
+        logsigma = self.logsigma(x)
         sigma = logsigma.exp()
+        sigma = T.clamp(sigma, min=0.3, max=2)
         return mu, sigma
 
     def sample_normal(self, observation, skill, reparameterize=True):
         mu, sigma = self.forward(observation, skill)
-        # logsigma = T.clamp(logsigma, -20, 2)
-        # sigma = logsigma.exp()
-        sigma = T.clamp(sigma, min=0.3, max=2)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
