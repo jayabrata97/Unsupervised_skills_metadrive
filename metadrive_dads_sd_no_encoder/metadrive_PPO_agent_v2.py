@@ -80,7 +80,7 @@ class ActorCritic(nn.Module):
         global previous_action
         dummy_action, dummy_action_logprob, mu, sigma = self.actor.sample_normal(observation, skill, reparameterize=True)
         if step_counter < 1e5:
-            if (step_counter_local % 25) == 0:
+            if (step_counter_local % 10) == 0:
                 action = sample_action(skill)
                 action = action.to(self.device)
                 sigma = T.clamp(sigma, min=0.3, max=2)
@@ -203,21 +203,22 @@ class PPOAgent(nn.Module):
         self.step_counter = 0
         self.update_after = update_after
         self.eps_clip = 0.2
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
 
         self.buffer = RLBuffer(max_size, obs_dims, n_actions, skill_dims)
-        self.policy = ActorCritic(lr, obs_dims, n_actions, features_dim, skill_dims, actor_layers, critic_layers).to(device_1)
+        self.policy = ActorCritic(lr, obs_dims, n_actions, features_dim, skill_dims, actor_layers, critic_layers).to(self.device)
         self.optimizer = T.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr},
                         {'params': self.policy.critic.parameters(), 'lr': lr}
                     ])
-        self.policy_old = ActorCritic(lr, obs_dims, n_actions, features_dim, skill_dims, actor_layers, critic_layers).to(device_1)
+        self.policy_old = ActorCritic(lr, obs_dims, n_actions, features_dim, skill_dims, actor_layers, critic_layers).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         self.MseLoss = nn.MSELoss()
 
     def select_action(self, observation, skill, step_counter_local, step_counter):
         with T.no_grad():
-            observation_tensor = T.from_numpy(observation).float().to(device_1)
-            skill_tensor = T.from_numpy(skill).float().to(device_1)
+            observation_tensor = T.from_numpy(observation).float().to(self.device)
+            skill_tensor = T.from_numpy(skill).float().to(self.device)
             action, action_logprob = self.policy_old.act(observation_tensor, skill_tensor, step_counter_local, step_counter)
 
         return action.detach().cpu().numpy(), action_logprob.detach().cpu().numpy()
@@ -294,8 +295,10 @@ class PPOAgent(nn.Module):
     def save_models(self, ep=0, best=True):
         if best:
             print("Saving best model")
-            T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")
-            T.save(self.policy.critic.state_dict(), self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")
+            T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")  ##for card 2
+            T.save(self.policy.critic.state_dict(), self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")  ##for card 2
+            # T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/PPOactor_intri_rew1st.pt")  ## for card 3
+            # T.save(self.policy.critic.state_dict(), self.checkpoint_file+"/PPOcritic_intri_rew1st.pt")  ##for card 3
         else:
             print("Saving regular model")
             T.save(self.policy.actor.state_dict(), self.checkpoint_file+"/actor_"+str(ep))
@@ -304,8 +307,10 @@ class PPOAgent(nn.Module):
     def load_models(self, ep=0, best=True):
         if best:
             print("Loading best model")
-            self.actor = T.load(self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")
-            self.critic = T.load(self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")
+            self.actor = T.load(self.checkpoint_file+"/PPOactor_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")  ##for card 2
+            self.critic = T.load(self.checkpoint_file+"/PPOcritic_eps"+str(self.eps_clip)+"_epc"+str(self.K_epochs)+"_L9_NewRew.pt")  ## for card 2
+            # self.actor = T.load(self.checkpoint_file+"/PPOactor_intri_rew1st.pt")  ## for card 3
+            # self.critic = T.load(self.checkpoint_file+"/PPOcritic_eintri_rew1st.pt") ## for card 3
         else:
             print("Loading regular model")
             self.actor = T.load(self.checkpoint_file+"/actor_"+str(ep))

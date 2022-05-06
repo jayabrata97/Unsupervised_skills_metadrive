@@ -47,7 +47,7 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, skill_dim
         step_counter_local += 1
         step_counter += 1
         cumulative_env_reward += reward
-        if step_counter_local % 25 == 0:
+        if step_counter_local % 10 == 0:
             skill = sample_skills(skill_dims)
 
         # buffer.store_transition(obs, action, obs_, done, skill, obs_-obs)
@@ -84,6 +84,7 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, st
         #     numerator = 1e-3
         # if denom == 0.0:
         #     denom = 1e-3
+        ######################################################## card2 code ##########################################################
         if step_counter < 1e6:
             intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
             total_reward = env_rewards[i]
@@ -93,6 +94,16 @@ def compute_dads_reward(agent, skill_dynamics, dads_buffer, available_skills, st
         else:
             intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
             total_reward = env_rewards[i]
+        ####################################################### card3 code ##############################################################
+        # if step_counter < 1e6:
+        #     intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
+        #     total_reward = np.log(numerator/denom) + np.log(L)
+        # elif step_counter >= 1e6 and step_counter < 2e6:
+        #     intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
+        #     total_reward = intrinsic_reward + env_rewards[i]
+        # else:
+        #     intrinsic_reward = np.log(numerator/denom) + 0.1*np.log(L)
+        #     total_reward = env_rewards[i]
         #agent.remember(observations[i], skills[i], actions[i], intrinsic_reward, next_observations[i], dones[i])
         agent.remember(observations[i], skills[i], actions[i], action_logprobs[i], total_reward, next_observations[i], dones[i])
     dads_buffer.clear_buffer()
@@ -189,7 +200,8 @@ if __name__ == '__main__':
         #for _ in range(128):
         agent.learn()
         agent.save_models()
-        T.save(skill_dynamics.state_dict(), './models/dads_metadrive/PPOskill_dynamics_eps0.2_epc30_L9_NewRew.pt')
+        T.save(skill_dynamics.state_dict(), './models/dads_metadrive/PPOskill_dynamics_eps0.2_epc30_L9_NewRew.pt')   ##For card 2 
+        # T.save(skill_dynamics.state_dict(), './models/dads_metadrive/PPOskill_dynamics_intri_rew1st.pt')  ## For card 3
         # critic_loss, policy_loss, alpha = agent.get_stats()
         policy_loss, critic_loss, dist_entropy, advantages = agent.get_stats()
         print(" Critic loss: ",critic_loss)

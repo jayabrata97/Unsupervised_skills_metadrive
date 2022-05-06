@@ -23,6 +23,7 @@ class RLBuffer():
         self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool)
         self.skill_memory = np.zeros((self.mem_size, skill_dims))
         self.state_return = np.zeros(self.mem_size)
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
 
     def store_transition(self, state, skill, action, action_logprob, reward, state_, done):
         index = self.mem_cntr % self.mem_size
@@ -68,13 +69,13 @@ class RLBuffer():
         self.state_return = np.zeros(self.mem_size)
 
     def __getitem__(self, index):
-        states = T.tensor(self.state_memory[index], dtype=T.float, device=device_1)
-        skills = T.tensor(self.skill_memory[index], dtype=T.float, device=device_1)
-        actions = T.tensor(self.action_memory[index], dtype=T.float, device=device_1)
-        action_logprobs = T.tensor(self.action_logprob_memory[index], dtype=T.float, device=device_1)
-        state_returns = T.tensor(self.state_return[index], dtype=T.float, device=device_1)
-        new_states = T.tensor(self.new_state_memory[index], dtype=T.float, device = device_1)
-        dones = T.tensor(self.terminal_memory[index], dtype=T.float, device=device_1)
+        states = T.tensor(self.state_memory[index], dtype=T.float, device=self.device)
+        skills = T.tensor(self.skill_memory[index], dtype=T.float, device=self.device)
+        actions = T.tensor(self.action_memory[index], dtype=T.float, device=self.device)
+        action_logprobs = T.tensor(self.action_logprob_memory[index], dtype=T.float, device=self.device)
+        state_returns = T.tensor(self.state_return[index], dtype=T.float, device=self.device)
+        new_states = T.tensor(self.new_state_memory[index], dtype=T.float, device = self.device)
+        dones = T.tensor(self.terminal_memory[index], dtype=T.float, device=self.device)
 
         return states, skills, actions, action_logprobs, state_returns, new_states, dones
 
@@ -93,6 +94,7 @@ class DadsBuffer(Dataset):
         self.terminal_memory = []
         self.skill_memory = []
         #self.state_delta_memory = []
+        self.device = T.device(device_1 if T.cuda.is_available() else 'cpu')
 
     def store_transition(self, observation, action, action_logprob, reward, observation_, done, skill):
         self.observation_memory.append(observation)
@@ -128,11 +130,11 @@ class DadsBuffer(Dataset):
         #self.state_delta_memory = []
 
     def __getitem__(self, index):
-        observations = T.tensor(self.observation_memory[index], dtype=T.float, device=device_1) #device=T.device("cuda:0")
-        skills = T.tensor(self.skill_memory[index], dtype=T.float, device=device_1)
+        observations = T.tensor(self.observation_memory[index], dtype=T.float, device=self.device) #device=T.device("cuda:0")
+        skills = T.tensor(self.skill_memory[index], dtype=T.float, device=self.device)
         #state_delta = T.tensor(self.state_delta_memory[index], dtype=T.float, device=device_1)
-        next_observations = T.tensor(self.next_observation_memory[index], dtype=T.float, device=device_1)
-        env_rewards = T.tensor(self.reward_memory[index], dtype=T.float, device = device_1)
+        next_observations = T.tensor(self.next_observation_memory[index], dtype=T.float, device=self.device)
+        env_rewards = T.tensor(self.reward_memory[index], dtype=T.float, device = self.device)
 
         return observations, skills, next_observations, env_rewards
 

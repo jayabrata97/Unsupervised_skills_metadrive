@@ -108,11 +108,11 @@ class ActorNetwork(nn.Module):
         # sigma = T.abs(sigma)  ##for preventing the negative values of std
         logsigma = self.logsigma(x)
         sigma = logsigma.exp()
-        sigma = T.clamp(sigma, min=0.3, max=2)
         return mu, sigma
 
     def sample_normal(self, observation, skill, reparameterize=True):
         mu, sigma = self.forward(observation, skill)
+        sigma = T.clamp(sigma, min=0.3, max=2)
         probabilities = Normal(mu, sigma)
         transforms = [TanhTransform(cache_size=1)]
         probabilities = TransformedDistribution(probabilities, transforms)
