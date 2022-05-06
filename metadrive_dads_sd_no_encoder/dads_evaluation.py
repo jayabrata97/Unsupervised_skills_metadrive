@@ -84,11 +84,13 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
             for skill in available_skills:
                 _, _, predicted_next_state, predicted_cost = skill_dynamics.forward(obs, skill)
                 costs.append(predicted_cost)
+            # print("costs for different skills: ", costs)
             chosen_skill_index = costs.index(max(costs))
             chosen_skill = available_skills[chosen_skill_index]
+            # print("chosen skill: ", chosen_skill_index)
             # print(' chosen skill:', chosen_skill)
             for j in range(0, primitive_holding):
-                action, _ = actor.sample_normal(obs, chosen_skill)
+                action, _, _, _ = actor.sample_normal(obs, chosen_skill)
                 obs, reward, done, info = env.step(action)
                 obs = T.tensor(obs, dtype=T.float, device=skill_dynamics.device)
                 episode_reward += reward
@@ -129,12 +131,12 @@ def evaluate(skill_dynamics, actor, num_episodes, env):
 if __name__ == "__main__":
     skill_dynamics= SkillDynamics()
     # skill_dynamics.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOskill_dynamics_eps0.2_epc30_L500.pt'))
-    skill_dynamics.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOskill_dynamics_eps0.2_epc30_L9.pt',map_location='cuda:0'))
+    skill_dynamics.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOskill_dynamics_1Menv_1Mcombined_1Menv.pt',map_location='cuda:0'))
     #print(skill_dynamics)
     skill_dynamics = skill_dynamics.eval()
     actor = ActorNetwork()
     # actor.load_state_dict(T.load('/home/airl-gpu4/Jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriRew_L500/PPOactor_eps0.2_epc30_L500.pt'))
-    actor.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOactor_eps0.2_epc30_L9.pt',map_location='cuda:0'))
+    actor.load_state_dict(T.load('/home/jayabrata/Unsupervised_skills_metadrive/metadrive_dads_sd_no_encoder/models/dads_metadrive/PPO_LogIntriNewRew_L9/PPOactor_1Menv_1Mcombined_1Menv_rew.pt',map_location='cuda:0'))
     #print(actor)
     actor = actor.eval()
 
