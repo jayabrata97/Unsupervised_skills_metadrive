@@ -1,5 +1,7 @@
-from metadrive import MetaDriveEnv
-from metadrive import SafeMetaDriveEnv
+#from metadrive import MetaDriveEnv
+from metadrive.envs.metadrive_env import MetaDriveEnv
+#from metadrive import SafeMetaDriveEnv
+from metadrive.envs.safe_metadrive_env import SafeMetaDriveEnv
 import argparse
 import random
 import gym
@@ -11,13 +13,13 @@ if traffic_density_sample < 0.5:
 
 env = MetaDriveEnv(dict(
     # controller="joystick",
-    use_render= True,
-    manual_control=True,
+    # use_render= True,
+    # manual_control=True,
     traffic_density= 0.1,
     random_traffic = False, 
     environment_num=200,
     start_seed=0,
-    #start_seed=random.randint(0, 1000)
+    use_lateral = True,
     random_lane_width=False,
     random_agent_model=True,
     random_lane_num=False,
@@ -33,11 +35,29 @@ print("Starting the environment ...\n")
 
 ep_reward = 0.0
 obs = env.reset()
-for i in range(100000000):
+for i in range(10):
     obs, reward, done, info = env.step(env.action_space.sample())
-    #print("obs type:",type(obs))
-    #print("step reward:",reward)
-    #print("Current velocity: ", info["velocity"])
+    ego_position = env.vehicle.position
+    print("ego position: ", ego_position) #physx_world position
+
+    heading_theta = env.vehicle.heading_theta
+    print("heading_theta: ", heading_theta)
+
+    speed = env.vehicle.speed
+    print("speed:", speed)
+
+    velocity = env.vehicle.velocity
+    print("velocity: ",velocity)
+
+    heading_diff = env.vehicle.heading_diff
+    print("heading_diff: ", heading_diff)
+
+    current_lane_number = env.vehicle.navigation.current_ref_lanes
+    print("current_lane_number: ", current_lane_number)
+
+    print("Current velocity: ", info["velocity"])
+    print()
+
     ep_reward += reward
     if done:
         break
