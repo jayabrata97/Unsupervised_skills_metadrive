@@ -6,6 +6,7 @@ import argparse
 import random
 import gym
 import numpy as np
+import matplotlib.pyplot as plt
 
 traffic_density_sample = np.random.uniform(0.5, 0.9)
 if traffic_density_sample < 0.5:
@@ -33,11 +34,16 @@ print("\nThe action space: {}".format(env.action_space))
 print("\nThe observation space: {}\n".format(env.observation_space))
 print("Starting the environment ...\n")
 
+x_pos=[]
+y_pos=[]
+
 ep_reward = 0.0
 obs = env.reset()
-for i in range(10):
+for i in range(10000000):
     obs, reward, done, info = env.step(env.action_space.sample())
     ego_position = env.vehicle.position
+    x_pos.append(ego_position[0])
+    y_pos.append(ego_position[1])
     print("ego position: ", ego_position) #physx_world position
 
     heading_theta = env.vehicle.heading_theta
@@ -100,4 +106,8 @@ print("\nThe returned information: {}.".format(info))
 print('i:', i)
 
 env.close()
+x_pos_arr = np.array(x_pos)
+y_pos_arr = np.array(y_pos)
+plot= plt.plot(x_pos_arr, y_pos_arr)
+plt.savefig("distance.jpg")
 print("\nMetaDrive successfully run!")
