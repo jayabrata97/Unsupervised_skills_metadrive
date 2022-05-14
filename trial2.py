@@ -17,7 +17,7 @@ env = MetaDriveEnv(dict(
     # manual_control=True,
     traffic_density= 0.1,
     random_traffic = False, 
-    environment_num=200,
+    environment_num=1,
     start_seed=0,
     use_lateral = True,
     random_lane_width=False,
@@ -52,8 +52,34 @@ for i in range(10):
     heading_diff = env.vehicle.heading_diff
     print("heading_diff: ", heading_diff)
 
-    current_lane_number = env.vehicle.navigation.current_ref_lanes
-    print("current_lane_number: ", current_lane_number)
+    current_ref_lanes = env.vehicle.navigation.current_ref_lanes
+    print("current_ref_lanes: ", current_ref_lanes)
+
+    vehicle_lane = env.vehicle.lane
+    print("vehicle lane: ", vehicle_lane)
+
+    if env.vehicle.lane in env.vehicle.navigation.current_ref_lanes:
+        current_lane = env.vehicle.lane
+        positive_road = 1
+    else:
+        current_lane = env.vehicle.navigation.current_ref_lanes[0]
+        current_road = env.vehicle.navigation.current_road
+        positive_road = 1 if not current_road.is_negative_road() else -1
+    long_last, lateral_last = current_lane.local_coordinates(env.vehicle.last_position)  # local lane position
+    long_now, lateral_now = current_lane.local_coordinates(env.vehicle.position) # local lane position
+    print("long_now: ", long_now, ";lateral_now:", lateral_now)
+    print("long_last: ", long_last, ";lateral_last: ", lateral_last)
+
+    info_for_ckpt = env.vehicle.navigation._get_info_for_checkpoint(lanes_id=vehicle_lane, 
+                                                                    ref_lane=env.vehicle.lane,
+                                                                    ego_vehicle=env.vehicle)
+    print("info_for_ckpt: ", info_for_ckpt)
+    
+    nav_info = env.vehicle.navigation.get_navi_info()
+    print("navigation info: ", nav_info)
+
+    # info = env.observation_space.observe(env.vehicle)
+    # print("info: ", info)
 
     print("Current velocity: ", info["velocity"])
     print()
