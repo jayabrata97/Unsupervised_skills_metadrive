@@ -47,7 +47,7 @@ def run_episode(env, agent, skill_dynamics, buffer, steps_per_episode, skill_dim
         step_counter_local += 1
         step_counter += 1
         cumulative_env_reward += reward
-        if step_counter_local % 10 == 0:
+        if step_counter_local % 20 == 0:
             skill = sample_skills(skill_dims)
 
         # buffer.store_transition(obs, action, obs_, done, skill, obs_-obs)
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         random_traffic = False, 
         environment_num=1000,
         start_seed=1000,
-        #start_seed=random.randint(0, 1000)
+        use_lateral = True,
         random_lane_width=False,
         random_agent_model=True,
         random_lane_num=False,
