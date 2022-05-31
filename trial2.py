@@ -14,8 +14,8 @@ if traffic_density_sample < 0.5:
 
 env = MetaDriveEnv(dict(
     # controller="joystick",
-    # use_render= True,
-    # manual_control=True,
+    use_render= True,
+    manual_control=True,
     traffic_density= 0.1,
     random_traffic = False, 
     environment_num=1,
@@ -36,10 +36,12 @@ print("Starting the environment ...\n")
 
 x_pos=[]
 y_pos=[]
+chckp_x = []
+chckp_y = []
 
 ep_reward = 0.0
 obs = env.reset()
-for i in range(10000000):
+for i in range(100000000):
     obs, reward, done, info = env.step(env.action_space.sample())
     ego_position = env.vehicle.position
     x_pos.append(ego_position[0])
@@ -77,12 +79,12 @@ for i in range(10000000):
     print("long_last: ", long_last, ";lateral_last: ", lateral_last)
 
     info_for_ckpt = env.vehicle.navigation._get_info_for_checkpoint(lanes_id=vehicle_lane, 
-                                                                    ref_lane=env.vehicle.lane,
+                                                                    ref_lane=current_lane, #env.vehicle.lane,
                                                                     ego_vehicle=env.vehicle)
     print("info_for_ckpt: ", info_for_ckpt)
     
     nav_info = env.vehicle.navigation.get_navi_info()
-    print("navigation info: ", nav_info)
+    print("navigation info: ", nav_info)    
 
     # info = env.observation_space.observe(env.vehicle)
     # print("info: ", info)
@@ -90,10 +92,18 @@ for i in range(10000000):
     print("Current velocity: ", info["velocity"])
     print()
 
+    if nav_info[0] <= 0.6: 
+        chckp_x.append(ego_position[0] + nav_info[0])
+        chckp_y.append(ego_position[1] + nav_info[1])
+    if nav_info[1] <= 0:
+        print(".......................................................................................................................")
+        print("neg nav info")
+        break
+
     ep_reward += reward
     if done:
         break
-    #if done:
+    # if done:
     # if (i%100) == 0:
     #     print("\nThe episode reward: ", ep_reward)
     #     print("\nThe returned information: {}.".format(info))
@@ -108,6 +118,9 @@ print('i:', i)
 env.close()
 x_pos_arr = np.array(x_pos)
 y_pos_arr = np.array(y_pos)
+chckp_x_arr = np.array(chckp_x)
+chckp_y_arr = np.array(chckp_y)
 plot= plt.plot(x_pos_arr, y_pos_arr)
+plot= plt.scatter(chckp_x_arr, chckp_y_arr, marker='x', color='r')
 plt.savefig("distance.jpg")
 print("\nMetaDrive successfully run!")
